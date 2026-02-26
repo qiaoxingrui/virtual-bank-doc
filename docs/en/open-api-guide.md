@@ -1,75 +1,75 @@
-# Open API 对接指南
+# Open API Integration Guide
 
-## 1. 概述
+## 1. Overview
 
-本文档描述如何通过 Open API 与我们的虚拟账号平台进行集成，包括 API 请求签名、Webhook 回调验签等内容。
+This document describes how to integrate with our Virtual Account Platform via Open API, including API request signing and Webhook callback verification.
 
-### 1.1 基础信息
+### 1.1 Basic Information
 
-| 项目 | 说明 |
+| Item | Description |
 |---|---|
 | Base URL | `https://{host}/admin-api` |
-| 协议 | HTTPS |
-| 数据格式 | JSON |
-| 字符编码 | UTF-8 |
+| Protocol | HTTPS |
+| Data Format | JSON |
+| Encoding | UTF-8 |
 
-### 1.2 密钥说明
+### 1.2 Key Descriptions
 
-开通合作后，您将获得两组密钥：
+After onboarding, you will receive two sets of keys:
 
-| 密钥 | 用途 |
+| Key | Purpose |
 |---|---|
-| **Secret Key** | 用于 API 请求签名，证明请求来源的合法性 |
-| **Webhook Key** | 用于验证我方回调请求的真实性，防止伪造 |
+| **Secret Key** | Used for API request signing to verify the legitimacy of the request origin |
+| **Webhook Key** | Used to verify the authenticity of our callback requests and prevent forgery |
 
-> ⚠️ 请妥善保管密钥，切勿在客户端代码、日志或版本控制中暴露。如果密钥泄露，请立即联系我们重新生成。
+> ⚠️ Keep your keys secure. Never expose them in client-side code, logs, or version control. If a key is compromised, contact us immediately to regenerate it.
 
 ---
 
-## 2. API 请求签名
+## 2. API Request Signing
 
-所有 Open API 请求都需要携带签名信息用于身份验证。
+All Open API requests must include signature information for authentication.
 
-### 2.1 请求头
+### 2.1 Request Headers
 
-| Header | 必填 | 说明 |
+| Header | Required | Description |
 |---|---|---|
-| `X-Api-Key` | 是 | 您的 Secret Key |
-| `X-Api-Timestamp` | 是 | 当前 Unix 时间戳（秒） |
-| `X-Api-Signature` | 是 | HMAC-SHA256 签名（Hex 编码） |
-| `Content-Type` | 是 | `application/json` |
+| `X-Api-Key` | Yes | Your Secret Key |
+| `X-Api-Timestamp` | Yes | Current Unix timestamp (seconds) |
+| `X-Api-Signature` | Yes | HMAC-SHA256 signature (hex-encoded) |
+| `Content-Type` | Yes | `application/json` |
 
-### 2.2 签名算法
+### 2.2 Signature Algorithm
 
-**步骤 1：构造待签名字符串**
+**Step 1: Construct the string to sign**
 
 ```
 StringToSign = HTTP_METHOD + "\n" + REQUEST_PATH + "\n" + TIMESTAMP + "\n" + REQUEST_BODY
 ```
 
-| 部分 | 说明 | 示例 |
+| Part | Description | Example |
 |---|---|---|
-| HTTP_METHOD | 大写 HTTP 方法 | `POST` |
-| REQUEST_PATH | 请求路径（不含域名和查询参数） | `/admin-api/bank/open/virtual-account/create` |
-| TIMESTAMP | 与 `X-Api-Timestamp` 一致 | `1708862400` |
-| REQUEST_BODY | 完整的请求体 JSON 字符串，无请求体时为空字符串 | `{"type":1,"amount":1000}` |
+| HTTP_METHOD | Uppercase HTTP method | `POST` |
+| REQUEST_PATH | Request path (without domain and query parameters) | `/admin-api/bank/open/virtual-account/create` |
+| TIMESTAMP | Same as `X-Api-Timestamp` | `1708862400` |
+| REQUEST_BODY | Complete request body JSON string; empty string if no body | `{"type":1,"amount":1000}` |
 
-> 注意：各部分之间使用 `\n`（换行符）连接。
+> Note: Parts are joined with `\n` (newline character).
 
-**步骤 2：计算 HMAC-SHA256**
+**Step 2: Compute HMAC-SHA256**
 
 ```
 Signature = Hex( HMAC-SHA256( SecretKey, StringToSign ) )
 ```
 
-使用您的 Secret Key 作为 HMAC 密钥，对待签名字符串进行 HMAC-SHA256 运算，然后将结果转为十六进制小写字符串。
+Use your Secret Key as the HMAC key to perform HMAC-SHA256 on the string to sign, then convert the result to a lowercase hexadecimal string.
 
-### 2.3 时间戳验证
+### 2.3 Timestamp Validation
 
-- 服务端会验证时间戳与当前时间的偏差，允许范围为 **±5 分钟**
-- 请确保您的服务器时钟与 NTP 服务器同步
+- The server validates the timestamp deviation from the current time, with an allowed range of **±5 minutes**
+- Please ensure your server clock is synchronized with an NTP server
 
-### 2.4 完整请求示例
+### 2.4 Complete Request Example
 
 ```http
 POST /admin-api/bank/open/virtual-account/create HTTP/1.1
@@ -82,7 +82,7 @@ X-Api-Signature: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a0
 {"type":1,"amount":1000,"expireDate":"2025-12-31T23:59:59"}
 ```
 
-### 2.5 代码示例
+### 2.5 Code Samples
 
 #### Java
 
@@ -129,7 +129,7 @@ def sign_request(secret_key: str, method: str, path: str,
     ).hexdigest()
     return signature
 
-# 使用示例
+# Usage example
 secret_key = "your_secret_key_here"
 method = "POST"
 path = "/admin-api/bank/open/virtual-account/create"
@@ -165,7 +165,7 @@ function signRequest(secretKey, method, path, timestamp, body = '') {
         .digest('hex');
 }
 
-// 使用示例
+// Usage example
 const secretKey = 'your_secret_key_here';
 const method = 'POST';
 const path = '/admin-api/bank/open/virtual-account/create';
@@ -194,7 +194,7 @@ function signRequest(string $secretKey, string $method, string $path,
     return hash_hmac('sha256', $stringToSign, $secretKey);
 }
 
-// 使用示例
+// Usage example
 $secretKey = 'your_secret_key_here';
 $method = 'POST';
 $path = '/admin-api/bank/open/virtual-account/create';
@@ -222,9 +222,9 @@ echo $response;
 
 ---
 
-## 3. API 响应格式
+## 3. API Response Format
 
-所有 API 接口统一返回以下 JSON 格式：
+All API endpoints return a unified JSON format:
 
 ```json
 {
@@ -234,85 +234,85 @@ echo $response;
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |---|---|---|
-| code | Integer | 状态码，`0` 表示成功 |
-| data | Object | 业务数据 |
-| msg | String | 错误信息（成功时为空字符串） |
+| code | Integer | Status code, `0` indicates success |
+| data | Object | Business data |
+| msg | String | Error message (empty string on success) |
 
-### 3.1 错误码
+### 3.1 Error Codes
 
-| 错误码 | 说明 |
+| Error Code | Description |
 |---|---|
-| 0 | 成功 |
-| 1009001003 | 无效的 API Key |
-| 1009001004 | 签名验证失败 |
-| 1009001005 | 请求时间戳已过期 |
-| 1009001006 | 缺少必要的鉴权请求头 |
-| 1009001002 | 客户已被禁用 |
+| 0 | Success |
+| 1009001003 | Invalid API Key |
+| 1009001004 | Signature verification failed |
+| 1009001005 | Request timestamp expired |
+| 1009001006 | Missing required authentication headers |
+| 1009001002 | Merchant has been disabled |
 
 ---
 
-## 4. Webhook 回调
+## 4. Webhook Callbacks
 
-当虚拟账号收到入金时，我们会向您配置的 Webhook URL 发送 HTTP POST 通知。
+When a virtual account receives a deposit, we will send an HTTP POST notification to your configured Webhook URL.
 
-### 4.1 回调请求头
+### 4.1 Callback Request Headers
 
-| Header | 说明 |
+| Header | Description |
 |---|---|
-| `X-Webhook-Signature` | 签名信息，格式：`t={timestamp},v1={signature}` |
-| `X-Webhook-Event` | 事件类型，如 `deposit.completed` |
+| `X-Webhook-Signature` | Signature information, format: `t={timestamp},v1={signature}` |
+| `X-Webhook-Event` | Event type, e.g. `deposit.completed` |
 | `Content-Type` | `application/json` |
 
-### 4.2 签名验证
+### 4.2 Signature Verification
 
-**步骤 1：解析签名头**
+**Step 1: Parse the signature header**
 
-从 `X-Webhook-Signature` 中提取 `t`（时间戳）和 `v1`（签名）：
+Extract `t` (timestamp) and `v1` (signature) from `X-Webhook-Signature`:
 
 ```
 X-Webhook-Signature: t=1708862400,v1=a1b2c3d4e5f6...
 ```
 
-**步骤 2：构造待签名字符串**
+**Step 2: Construct the string to sign**
 
 ```
 StringToSign = TIMESTAMP + "." + REQUEST_BODY
 ```
 
-其中 `TIMESTAMP` 是从签名头中提取的 `t` 值，`REQUEST_BODY` 是原始的请求体字符串。
+Where `TIMESTAMP` is the `t` value extracted from the signature header, and `REQUEST_BODY` is the raw request body string.
 
-**步骤 3：计算签名并比对**
+**Step 3: Compute and compare the signature**
 
 ```
 ExpectedSignature = Hex( HMAC-SHA256( WebhookKey, StringToSign ) )
 ```
 
-比较计算结果与 `v1` 值是否一致。
+Compare the computed result with the `v1` value.
 
-**步骤 4：防重放验证（推荐）**
+**Step 4: Replay attack prevention (recommended)**
 
-检查 `t` 时间戳与当前时间的差值，建议拒绝超过 5 分钟的回调。
+Check the difference between the `t` timestamp and the current time. It is recommended to reject callbacks older than 5 minutes.
 
-### 4.3 回调响应
+### 4.3 Callback Response
 
-- 返回 HTTP 状态码 `2xx` 视为接收成功
-- 返回其他状态码或超时（30 秒）视为失败，将触发重试
+- Return HTTP status code `2xx` to indicate successful receipt
+- Any other status code or timeout (30 seconds) is considered a failure and will trigger a retry
 
-### 4.4 重试策略
+### 4.4 Retry Strategy
 
-| 重试次数 | 延迟 |
+| Retry Attempt | Delay |
 |---|---|
-| 第 1 次 | 30 秒 |
-| 第 2 次 | 2 分钟 |
-| 第 3 次 | 10 分钟 |
-| 第 4 次 | 1 小时 |
-| 第 5 次 | 6 小时 |
+| 1st | 30 seconds |
+| 2nd | 2 minutes |
+| 3rd | 10 minutes |
+| 4th | 1 hour |
+| 5th | 6 hours |
 
-超过 5 次重试仍失败，将停止重试并标记为最终失败。
+After 5 failed retries, the system will stop retrying and mark it as a final failure.
 
-### 4.5 Webhook 验签代码示例
+### 4.5 Webhook Verification Code Samples
 
 #### Java
 
@@ -435,13 +435,13 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 
 ---
 
-## 5. 事件类型
+## 5. Event Types
 
-### 5.1 deposit.completed - 入金完成
+### 5.1 deposit.completed - Deposit Completed
 
-当虚拟账号收到入金后触发。
+Triggered when a virtual account receives a deposit.
 
-**Payload 示例：**
+**Payload Example:**
 
 ```json
 {
@@ -455,54 +455,54 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| Field | Type | Description |
 |---|---|---|
-| accountNo | String | 虚拟账号 |
-| amount | String | 入金金额 |
-| currency | String | 币别（默认 `TWD`，可能值：`TWD` / `USD`） |
-| transactionDate | String | 交易日期 (yyyyMMdd) |
-| transactionTime | String | 交易时间 (HHmmss) |
-| type | String | 交易类型（见下方说明） |
-| seqNo | String | 交易序号 |
+| accountNo | String | Virtual account number |
+| amount | String | Deposit amount |
+| currency | String | Currency (default `TWD`, possible values: `TWD` / `USD`) |
+| transactionDate | String | Transaction date (yyyyMMdd) |
+| transactionTime | String | Transaction time (HHmmss) |
+| type | String | Transaction type (see table below) |
+| seqNo | String | Transaction sequence number |
 
-**交易类型 (type) 代码说明：**
+**Transaction Type (type) Codes:**
 
-| 代码 | 说明 |
+| Code | Description |
 |---|---|
-| A | 临柜 |
-| B / P | 语音 |
-| C | 网银 |
-| D | 行动银行 |
-| E / R | 汇款 |
+| A | Over-the-counter |
+| B / P | Voice banking |
+| C | Internet banking |
+| D | Mobile banking |
+| E / R | Wire transfer |
 | F | FXML |
 | G | eBill |
 | J | ADM |
 | M | MOD |
 | T | ATM |
 | X | eATM |
-| 0 | 其他 |
+| 0 | Other |
 
 ---
 
-## 6. 常见问题
+## 6. FAQ
 
-### Q: 签名验证一直失败？
+### Q: Signature verification keeps failing?
 
-请检查以下几点：
-1. 确认 Secret Key 是否正确
-2. 确认待签名字符串的拼接顺序和换行符
-3. 确认时间戳是 **秒级** Unix 时间戳，不是毫秒
-4. 确认请求体是原始 JSON 字符串，没有经过额外格式化
-5. 确认服务器时钟准确
+Please check the following:
+1. Verify that your Secret Key is correct
+2. Verify the concatenation order and newline characters in the string to sign
+3. Verify the timestamp is a **second-level** Unix timestamp, not milliseconds
+4. Verify the request body is the raw JSON string without additional formatting
+5. Verify your server clock is accurate
 
-### Q: Webhook 收不到回调？
+### Q: Not receiving Webhook callbacks?
 
-请检查：
-1. Webhook URL 是否能从公网访问
-2. 防火墙是否放行了我方服务器 IP
-3. 服务端是否正确返回了 HTTP 2xx 状态码
-4. 回调处理是否在 30 秒内完成
+Please check:
+1. Whether the Webhook URL is accessible from the public internet
+2. Whether the firewall allows traffic from our server IPs
+3. Whether the server correctly returns an HTTP 2xx status code
+4. Whether the callback processing completes within 30 seconds
 
-### Q: 密钥泄露了怎么办？
+### Q: What if a key is compromised?
 
-请立即联系我们的技术人员，我们会在后台为您重新生成密钥。旧密钥将立即失效。
+Contact our technical team immediately. We will regenerate your keys in the admin panel. The old keys will be invalidated immediately.

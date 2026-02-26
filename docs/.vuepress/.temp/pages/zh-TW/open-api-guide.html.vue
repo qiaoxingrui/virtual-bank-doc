@@ -1,12 +1,12 @@
-<template><div><h1 id="open-api-对接指南" tabindex="-1"><a class="header-anchor" href="#open-api-对接指南"><span>Open API 对接指南</span></a></h1>
+<template><div><h1 id="open-api-串接指南" tabindex="-1"><a class="header-anchor" href="#open-api-串接指南"><span>Open API 串接指南</span></a></h1>
 <h2 id="_1-概述" tabindex="-1"><a class="header-anchor" href="#_1-概述"><span>1. 概述</span></a></h2>
-<p>本文档描述如何通过 Open API 与我们的虚拟账号平台进行集成，包括 API 请求签名、Webhook 回调验签等内容。</p>
-<h3 id="_1-1-基础信息" tabindex="-1"><a class="header-anchor" href="#_1-1-基础信息"><span>1.1 基础信息</span></a></h3>
+<p>本文件說明如何透過 Open API 與我們的虛擬帳號平台進行串接，包含 API 請求簽章、Webhook 回呼驗章等內容。</p>
+<h3 id="_1-1-基本資訊" tabindex="-1"><a class="header-anchor" href="#_1-1-基本資訊"><span>1.1 基本資訊</span></a></h3>
 <table>
 <thead>
 <tr>
-<th>项目</th>
-<th>说明</th>
+<th>項目</th>
+<th>說明</th>
 </tr>
 </thead>
 <tbody>
@@ -15,52 +15,52 @@
 <td><code v-pre>https://{host}/admin-api</code></td>
 </tr>
 <tr>
-<td>协议</td>
+<td>通訊協定</td>
 <td>HTTPS</td>
 </tr>
 <tr>
-<td>数据格式</td>
+<td>資料格式</td>
 <td>JSON</td>
 </tr>
 <tr>
-<td>字符编码</td>
+<td>字元編碼</td>
 <td>UTF-8</td>
 </tr>
 </tbody>
 </table>
-<h3 id="_1-2-密钥说明" tabindex="-1"><a class="header-anchor" href="#_1-2-密钥说明"><span>1.2 密钥说明</span></a></h3>
-<p>开通合作后，您将获得两组密钥：</p>
+<h3 id="_1-2-金鑰說明" tabindex="-1"><a class="header-anchor" href="#_1-2-金鑰說明"><span>1.2 金鑰說明</span></a></h3>
+<p>開通合作後，您將取得兩組金鑰：</p>
 <table>
 <thead>
 <tr>
-<th>密钥</th>
+<th>金鑰</th>
 <th>用途</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>Secret Key</strong></td>
-<td>用于 API 请求签名，证明请求来源的合法性</td>
+<td>用於 API 請求簽章，證明請求來源的合法性</td>
 </tr>
 <tr>
 <td><strong>Webhook Key</strong></td>
-<td>用于验证我方回调请求的真实性，防止伪造</td>
+<td>用於驗證我方回呼請求的真實性，防止偽造</td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p>⚠️ 请妥善保管密钥，切勿在客户端代码、日志或版本控制中暴露。如果密钥泄露，请立即联系我们重新生成。</p>
+<p>⚠️ 請妥善保管金鑰，切勿在用戶端程式碼、日誌或版本控制中暴露。若金鑰洩漏，請立即聯繫我們重新產生。</p>
 </blockquote>
 <hr>
-<h2 id="_2-api-请求签名" tabindex="-1"><a class="header-anchor" href="#_2-api-请求签名"><span>2. API 请求签名</span></a></h2>
-<p>所有 Open API 请求都需要携带签名信息用于身份验证。</p>
-<h3 id="_2-1-请求头" tabindex="-1"><a class="header-anchor" href="#_2-1-请求头"><span>2.1 请求头</span></a></h3>
+<h2 id="_2-api-請求簽章" tabindex="-1"><a class="header-anchor" href="#_2-api-請求簽章"><span>2. API 請求簽章</span></a></h2>
+<p>所有 Open API 請求都需要攜帶簽章資訊用於身分驗證。</p>
+<h3 id="_2-1-請求標頭" tabindex="-1"><a class="header-anchor" href="#_2-1-請求標頭"><span>2.1 請求標頭</span></a></h3>
 <table>
 <thead>
 <tr>
 <th>Header</th>
 <th>必填</th>
-<th>说明</th>
+<th>說明</th>
 </tr>
 </thead>
 <tbody>
@@ -72,12 +72,12 @@
 <tr>
 <td><code v-pre>X-Api-Timestamp</code></td>
 <td>是</td>
-<td>当前 Unix 时间戳（秒）</td>
+<td>目前 Unix 時間戳記（秒）</td>
 </tr>
 <tr>
 <td><code v-pre>X-Api-Signature</code></td>
 <td>是</td>
-<td>HMAC-SHA256 签名（Hex 编码）</td>
+<td>HMAC-SHA256 簽章（Hex 編碼）</td>
 </tr>
 <tr>
 <td><code v-pre>Content-Type</code></td>
@@ -86,54 +86,54 @@
 </tr>
 </tbody>
 </table>
-<h3 id="_2-2-签名算法" tabindex="-1"><a class="header-anchor" href="#_2-2-签名算法"><span>2.2 签名算法</span></a></h3>
-<p><strong>步骤 1：构造待签名字符串</strong></p>
+<h3 id="_2-2-簽章演算法" tabindex="-1"><a class="header-anchor" href="#_2-2-簽章演算法"><span>2.2 簽章演算法</span></a></h3>
+<p><strong>步驟 1：建構待簽章字串</strong></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">StringToSign = HTTP_METHOD + "\n" + REQUEST_PATH + "\n" + TIMESTAMP + "\n" + REQUEST_BODY</span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><table>
 <thead>
 <tr>
 <th>部分</th>
-<th>说明</th>
-<th>示例</th>
+<th>說明</th>
+<th>範例</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>HTTP_METHOD</td>
-<td>大写 HTTP 方法</td>
+<td>大寫 HTTP 方法</td>
 <td><code v-pre>POST</code></td>
 </tr>
 <tr>
 <td>REQUEST_PATH</td>
-<td>请求路径（不含域名和查询参数）</td>
+<td>請求路徑（不含網域名稱和查詢參數）</td>
 <td><code v-pre>/admin-api/bank/open/virtual-account/create</code></td>
 </tr>
 <tr>
 <td>TIMESTAMP</td>
-<td>与 <code v-pre>X-Api-Timestamp</code> 一致</td>
+<td>與 <code v-pre>X-Api-Timestamp</code> 一致</td>
 <td><code v-pre>1708862400</code></td>
 </tr>
 <tr>
 <td>REQUEST_BODY</td>
-<td>完整的请求体 JSON 字符串，无请求体时为空字符串</td>
+<td>完整的請求主體 JSON 字串，無請求主體時為空字串</td>
 <td><code v-pre>{&quot;type&quot;:1,&quot;amount&quot;:1000}</code></td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p>注意：各部分之间使用 <code v-pre>\n</code>（换行符）连接。</p>
+<p>注意：各部分之間使用 <code v-pre>\n</code>（換行字元）串接。</p>
 </blockquote>
-<p><strong>步骤 2：计算 HMAC-SHA256</strong></p>
+<p><strong>步驟 2：計算 HMAC-SHA256</strong></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">Signature = Hex( HMAC-SHA256( SecretKey, StringToSign ) )</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>使用您的 Secret Key 作为 HMAC 密钥，对待签名字符串进行 HMAC-SHA256 运算，然后将结果转为十六进制小写字符串。</p>
-<h3 id="_2-3-时间戳验证" tabindex="-1"><a class="header-anchor" href="#_2-3-时间戳验证"><span>2.3 时间戳验证</span></a></h3>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>使用您的 Secret Key 作為 HMAC 金鑰，對待簽章字串進行 HMAC-SHA256 運算，然後將結果轉為十六進位小寫字串。</p>
+<h3 id="_2-3-時間戳記驗證" tabindex="-1"><a class="header-anchor" href="#_2-3-時間戳記驗證"><span>2.3 時間戳記驗證</span></a></h3>
 <ul>
-<li>服务端会验证时间戳与当前时间的偏差，允许范围为 <strong>±5 分钟</strong></li>
-<li>请确保您的服务器时钟与 NTP 服务器同步</li>
+<li>伺服器端會驗證時間戳記與目前時間的偏差，容許範圍為 <strong>±5 分鐘</strong></li>
+<li>請確保您的伺服器時鐘與 NTP 伺服器同步</li>
 </ul>
-<h3 id="_2-4-完整请求示例" tabindex="-1"><a class="header-anchor" href="#_2-4-完整请求示例"><span>2.4 完整请求示例</span></a></h3>
+<h3 id="_2-4-完整請求範例" tabindex="-1"><a class="header-anchor" href="#_2-4-完整請求範例"><span>2.4 完整請求範例</span></a></h3>
 <div class="language-http line-numbers-mode" data-highlighter="prismjs" data-ext="http"><pre v-pre><code><span class="line"><span class="token request-line"><span class="token method property">POST</span> <span class="token request-target url">/admin-api/bank/open/virtual-account/create</span> <span class="token http-version property">HTTP/1.1</span></span></span>
 <span class="line"><span class="token header"><span class="token header-name keyword">Host</span><span class="token punctuation">:</span> <span class="token header-value">api.example.com</span></span></span>
 <span class="line"><span class="token header"><span class="token header-name keyword">Content-Type</span><span class="token punctuation">:</span> <span class="token header-value">application/json</span></span></span>
@@ -143,7 +143,7 @@
 <span class="line"><span class="token application-json"></span>
 <span class="line"><span class="token punctuation">{</span><span class="token property">"type"</span><span class="token operator">:</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token property">"amount"</span><span class="token operator">:</span><span class="token number">1000</span><span class="token punctuation">,</span><span class="token property">"expireDate"</span><span class="token operator">:</span><span class="token string">"2025-12-31T23:59:59"</span><span class="token punctuation">}</span></span>
 <span class="line"></span></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="_2-5-代码示例" tabindex="-1"><a class="header-anchor" href="#_2-5-代码示例"><span>2.5 代码示例</span></a></h3>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="_2-5-程式碼範例" tabindex="-1"><a class="header-anchor" href="#_2-5-程式碼範例"><span>2.5 程式碼範例</span></a></h3>
 <h4 id="java" tabindex="-1"><a class="header-anchor" href="#java"><span>Java</span></a></h4>
 <div class="language-java line-numbers-mode" data-highlighter="prismjs" data-ext="java"><pre v-pre><code><span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>crypto<span class="token punctuation">.</span></span><span class="token class-name">Mac</span></span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>crypto<span class="token punctuation">.</span>spec<span class="token punctuation">.</span></span><span class="token class-name">SecretKeySpec</span></span><span class="token punctuation">;</span></span>
@@ -184,7 +184,7 @@
 <span class="line">    <span class="token punctuation">)</span><span class="token punctuation">.</span>hexdigest<span class="token punctuation">(</span><span class="token punctuation">)</span></span>
 <span class="line">    <span class="token keyword">return</span> signature</span>
 <span class="line"></span>
-<span class="line"><span class="token comment"># 使用示例</span></span>
+<span class="line"><span class="token comment"># 使用範例</span></span>
 <span class="line">secret_key <span class="token operator">=</span> <span class="token string">"your_secret_key_here"</span></span>
 <span class="line">method <span class="token operator">=</span> <span class="token string">"POST"</span></span>
 <span class="line">path <span class="token operator">=</span> <span class="token string">"/admin-api/bank/open/virtual-account/create"</span></span>
@@ -217,7 +217,7 @@
 <span class="line">        <span class="token punctuation">.</span><span class="token function">digest</span><span class="token punctuation">(</span><span class="token string">'hex'</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span>
-<span class="line"><span class="token comment">// 使用示例</span></span>
+<span class="line"><span class="token comment">// 使用範例</span></span>
 <span class="line"><span class="token keyword">const</span> secretKey <span class="token operator">=</span> <span class="token string">'your_secret_key_here'</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">const</span> method <span class="token operator">=</span> <span class="token string">'POST'</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token string">'/admin-api/bank/open/virtual-account/create'</span><span class="token punctuation">;</span></span>
@@ -243,7 +243,7 @@
 <span class="line">    <span class="token keyword">return</span> <span class="token function">hash_hmac</span><span class="token punctuation">(</span><span class="token string single-quoted-string">'sha256'</span><span class="token punctuation">,</span> <span class="token variable">$stringToSign</span><span class="token punctuation">,</span> <span class="token variable">$secretKey</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span>
-<span class="line"><span class="token comment">// 使用示例</span></span>
+<span class="line"><span class="token comment">// 使用範例</span></span>
 <span class="line"><span class="token variable">$secretKey</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'your_secret_key_here'</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token variable">$method</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'POST'</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token variable">$path</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'/admin-api/bank/open/virtual-account/create'</span><span class="token punctuation">;</span></span>
@@ -269,8 +269,8 @@
 <span class="line"><span class="token keyword">echo</span> <span class="token variable">$response</span><span class="token punctuation">;</span></span>
 <span class="line"></span></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><hr>
-<h2 id="_3-api-响应格式" tabindex="-1"><a class="header-anchor" href="#_3-api-响应格式"><span>3. API 响应格式</span></a></h2>
-<p>所有 API 接口统一返回以下 JSON 格式：</p>
+<h2 id="_3-api-回應格式" tabindex="-1"><a class="header-anchor" href="#_3-api-回應格式"><span>3. API 回應格式</span></a></h2>
+<p>所有 API 介面統一回傳以下 JSON 格式：</p>
 <div class="language-json line-numbers-mode" data-highlighter="prismjs" data-ext="json"><pre v-pre><code><span class="line"><span class="token punctuation">{</span></span>
 <span class="line">    <span class="token property">"code"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span></span>
 <span class="line">    <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span><span class="token punctuation">,</span></span>
@@ -280,35 +280,35 @@
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><table>
 <thead>
 <tr>
-<th>字段</th>
-<th>类型</th>
-<th>说明</th>
+<th>欄位</th>
+<th>類型</th>
+<th>說明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>code</td>
 <td>Integer</td>
-<td>状态码，<code v-pre>0</code> 表示成功</td>
+<td>狀態碼，<code v-pre>0</code> 表示成功</td>
 </tr>
 <tr>
 <td>data</td>
 <td>Object</td>
-<td>业务数据</td>
+<td>業務資料</td>
 </tr>
 <tr>
 <td>msg</td>
 <td>String</td>
-<td>错误信息（成功时为空字符串）</td>
+<td>錯誤訊息（成功時為空字串）</td>
 </tr>
 </tbody>
 </table>
-<h3 id="_3-1-错误码" tabindex="-1"><a class="header-anchor" href="#_3-1-错误码"><span>3.1 错误码</span></a></h3>
+<h3 id="_3-1-錯誤碼" tabindex="-1"><a class="header-anchor" href="#_3-1-錯誤碼"><span>3.1 錯誤碼</span></a></h3>
 <table>
 <thead>
 <tr>
-<th>错误码</th>
-<th>说明</th>
+<th>錯誤碼</th>
+<th>說明</th>
 </tr>
 </thead>
 <tbody>
@@ -318,45 +318,45 @@
 </tr>
 <tr>
 <td>1009001003</td>
-<td>无效的 API Key</td>
+<td>無效的 API Key</td>
 </tr>
 <tr>
 <td>1009001004</td>
-<td>签名验证失败</td>
+<td>簽章驗證失敗</td>
 </tr>
 <tr>
 <td>1009001005</td>
-<td>请求时间戳已过期</td>
+<td>請求時間戳記已過期</td>
 </tr>
 <tr>
 <td>1009001006</td>
-<td>缺少必要的鉴权请求头</td>
+<td>缺少必要的驗證請求標頭</td>
 </tr>
 <tr>
 <td>1009001002</td>
-<td>客户已被禁用</td>
+<td>客戶已被停用</td>
 </tr>
 </tbody>
 </table>
 <hr>
-<h2 id="_4-webhook-回调" tabindex="-1"><a class="header-anchor" href="#_4-webhook-回调"><span>4. Webhook 回调</span></a></h2>
-<p>当虚拟账号收到入金时，我们会向您配置的 Webhook URL 发送 HTTP POST 通知。</p>
-<h3 id="_4-1-回调请求头" tabindex="-1"><a class="header-anchor" href="#_4-1-回调请求头"><span>4.1 回调请求头</span></a></h3>
+<h2 id="_4-webhook-回呼" tabindex="-1"><a class="header-anchor" href="#_4-webhook-回呼"><span>4. Webhook 回呼</span></a></h2>
+<p>當虛擬帳號收到入金時，我們會向您設定的 Webhook URL 傳送 HTTP POST 通知。</p>
+<h3 id="_4-1-回呼請求標頭" tabindex="-1"><a class="header-anchor" href="#_4-1-回呼請求標頭"><span>4.1 回呼請求標頭</span></a></h3>
 <table>
 <thead>
 <tr>
 <th>Header</th>
-<th>说明</th>
+<th>說明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code v-pre>X-Webhook-Signature</code></td>
-<td>签名信息，格式：<code v-pre>t={timestamp},v1={signature}</code></td>
+<td>簽章資訊，格式：<code v-pre>t={timestamp},v1={signature}</code></td>
 </tr>
 <tr>
 <td><code v-pre>X-Webhook-Event</code></td>
-<td>事件类型，如 <code v-pre>deposit.completed</code></td>
+<td>事件類型，如 <code v-pre>deposit.completed</code></td>
 </tr>
 <tr>
 <td><code v-pre>Content-Type</code></td>
@@ -364,32 +364,32 @@
 </tr>
 </tbody>
 </table>
-<h3 id="_4-2-签名验证" tabindex="-1"><a class="header-anchor" href="#_4-2-签名验证"><span>4.2 签名验证</span></a></h3>
-<p><strong>步骤 1：解析签名头</strong></p>
-<p>从 <code v-pre>X-Webhook-Signature</code> 中提取 <code v-pre>t</code>（时间戳）和 <code v-pre>v1</code>（签名）：</p>
+<h3 id="_4-2-簽章驗證" tabindex="-1"><a class="header-anchor" href="#_4-2-簽章驗證"><span>4.2 簽章驗證</span></a></h3>
+<p><strong>步驟 1：解析簽章標頭</strong></p>
+<p>從 <code v-pre>X-Webhook-Signature</code> 中擷取 <code v-pre>t</code>（時間戳記）和 <code v-pre>v1</code>（簽章）：</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">X-Webhook-Signature: t=1708862400,v1=a1b2c3d4e5f6...</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p><strong>步骤 2：构造待签名字符串</strong></p>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p><strong>步驟 2：建構待簽章字串</strong></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">StringToSign = TIMESTAMP + "." + REQUEST_BODY</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>其中 <code v-pre>TIMESTAMP</code> 是从签名头中提取的 <code v-pre>t</code> 值，<code v-pre>REQUEST_BODY</code> 是原始的请求体字符串。</p>
-<p><strong>步骤 3：计算签名并比对</strong></p>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>其中 <code v-pre>TIMESTAMP</code> 是從簽章標頭中擷取的 <code v-pre>t</code> 值，<code v-pre>REQUEST_BODY</code> 是原始的請求主體字串。</p>
+<p><strong>步驟 3：計算簽章並比對</strong></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">ExpectedSignature = Hex( HMAC-SHA256( WebhookKey, StringToSign ) )</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>比较计算结果与 <code v-pre>v1</code> 值是否一致。</p>
-<p><strong>步骤 4：防重放验证（推荐）</strong></p>
-<p>检查 <code v-pre>t</code> 时间戳与当前时间的差值，建议拒绝超过 5 分钟的回调。</p>
-<h3 id="_4-3-回调响应" tabindex="-1"><a class="header-anchor" href="#_4-3-回调响应"><span>4.3 回调响应</span></a></h3>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>比較計算結果與 <code v-pre>v1</code> 值是否一致。</p>
+<p><strong>步驟 4：防重送驗證（建議）</strong></p>
+<p>檢查 <code v-pre>t</code> 時間戳記與目前時間的差值，建議拒絕超過 5 分鐘的回呼。</p>
+<h3 id="_4-3-回呼回應" tabindex="-1"><a class="header-anchor" href="#_4-3-回呼回應"><span>4.3 回呼回應</span></a></h3>
 <ul>
-<li>返回 HTTP 状态码 <code v-pre>2xx</code> 视为接收成功</li>
-<li>返回其他状态码或超时（30 秒）视为失败，将触发重试</li>
+<li>回傳 HTTP 狀態碼 <code v-pre>2xx</code> 視為接收成功</li>
+<li>回傳其他狀態碼或逾時（30 秒）視為失敗，將觸發重試</li>
 </ul>
-<h3 id="_4-4-重试策略" tabindex="-1"><a class="header-anchor" href="#_4-4-重试策略"><span>4.4 重试策略</span></a></h3>
+<h3 id="_4-4-重試策略" tabindex="-1"><a class="header-anchor" href="#_4-4-重試策略"><span>4.4 重試策略</span></a></h3>
 <table>
 <thead>
 <tr>
-<th>重试次数</th>
-<th>延迟</th>
+<th>重試次數</th>
+<th>延遲</th>
 </tr>
 </thead>
 <tbody>
@@ -399,24 +399,24 @@
 </tr>
 <tr>
 <td>第 2 次</td>
-<td>2 分钟</td>
+<td>2 分鐘</td>
 </tr>
 <tr>
 <td>第 3 次</td>
-<td>10 分钟</td>
+<td>10 分鐘</td>
 </tr>
 <tr>
 <td>第 4 次</td>
-<td>1 小时</td>
+<td>1 小時</td>
 </tr>
 <tr>
 <td>第 5 次</td>
-<td>6 小时</td>
+<td>6 小時</td>
 </tr>
 </tbody>
 </table>
-<p>超过 5 次重试仍失败，将停止重试并标记为最终失败。</p>
-<h3 id="_4-5-webhook-验签代码示例" tabindex="-1"><a class="header-anchor" href="#_4-5-webhook-验签代码示例"><span>4.5 Webhook 验签代码示例</span></a></h3>
+<p>超過 5 次重試仍失敗，將停止重試並標記為最終失敗。</p>
+<h3 id="_4-5-webhook-驗章程式碼範例" tabindex="-1"><a class="header-anchor" href="#_4-5-webhook-驗章程式碼範例"><span>4.5 Webhook 驗章程式碼範例</span></a></h3>
 <h4 id="java-1" tabindex="-1"><a class="header-anchor" href="#java-1"><span>Java</span></a></h4>
 <div class="language-java line-numbers-mode" data-highlighter="prismjs" data-ext="java"><pre v-pre><code><span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>crypto<span class="token punctuation">.</span></span><span class="token class-name">Mac</span></span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>crypto<span class="token punctuation">.</span>spec<span class="token punctuation">.</span></span><span class="token class-name">SecretKeySpec</span></span><span class="token punctuation">;</span></span>
@@ -525,10 +525,10 @@
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><hr>
-<h2 id="_5-事件类型" tabindex="-1"><a class="header-anchor" href="#_5-事件类型"><span>5. 事件类型</span></a></h2>
+<h2 id="_5-事件類型" tabindex="-1"><a class="header-anchor" href="#_5-事件類型"><span>5. 事件類型</span></a></h2>
 <h3 id="_5-1-deposit-completed-入金完成" tabindex="-1"><a class="header-anchor" href="#_5-1-deposit-completed-入金完成"><span>5.1 deposit.completed - 入金完成</span></a></h3>
-<p>当虚拟账号收到入金后触发。</p>
-<p><strong>Payload 示例：</strong></p>
+<p>當虛擬帳號收到入金後觸發。</p>
+<p><strong>Payload 範例：</strong></p>
 <div class="language-json line-numbers-mode" data-highlighter="prismjs" data-ext="json"><pre v-pre><code><span class="line"><span class="token punctuation">{</span></span>
 <span class="line">    <span class="token property">"accountNo"</span><span class="token operator">:</span> <span class="token string">"1234567890123456"</span><span class="token punctuation">,</span></span>
 <span class="line">    <span class="token property">"amount"</span><span class="token operator">:</span> <span class="token string">"50000"</span><span class="token punctuation">,</span></span>
@@ -542,26 +542,26 @@
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><table>
 <thead>
 <tr>
-<th>字段</th>
-<th>类型</th>
-<th>说明</th>
+<th>欄位</th>
+<th>類型</th>
+<th>說明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>accountNo</td>
 <td>String</td>
-<td>虚拟账号</td>
+<td>虛擬帳號</td>
 </tr>
 <tr>
 <td>amount</td>
 <td>String</td>
-<td>入金金额</td>
+<td>入金金額</td>
 </tr>
 <tr>
 <td>currency</td>
 <td>String</td>
-<td>币别（默认 <code v-pre>TWD</code>，可能值：<code v-pre>TWD</code> / <code v-pre>USD</code>）</td>
+<td>幣別（預設 <code v-pre>TWD</code>，可能值：<code v-pre>TWD</code> / <code v-pre>USD</code>）</td>
 </tr>
 <tr>
 <td>transactionDate</td>
@@ -571,48 +571,48 @@
 <tr>
 <td>transactionTime</td>
 <td>String</td>
-<td>交易时间 (HHmmss)</td>
+<td>交易時間 (HHmmss)</td>
 </tr>
 <tr>
 <td>type</td>
 <td>String</td>
-<td>交易类型（见下方说明）</td>
+<td>交易類別（見下方說明）</td>
 </tr>
 <tr>
 <td>seqNo</td>
 <td>String</td>
-<td>交易序号</td>
+<td>交易序號</td>
 </tr>
 </tbody>
 </table>
-<p><strong>交易类型 (type) 代码说明：</strong></p>
+<p><strong>交易類別 (type) 代碼說明：</strong></p>
 <table>
 <thead>
 <tr>
-<th>代码</th>
-<th>说明</th>
+<th>代碼</th>
+<th>說明</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>A</td>
-<td>临柜</td>
+<td>臨櫃</td>
 </tr>
 <tr>
 <td>B / P</td>
-<td>语音</td>
+<td>語音</td>
 </tr>
 <tr>
 <td>C</td>
-<td>网银</td>
+<td>網銀</td>
 </tr>
 <tr>
 <td>D</td>
-<td>行动银行</td>
+<td>行動銀行</td>
 </tr>
 <tr>
 <td>E / R</td>
-<td>汇款</td>
+<td>匯款</td>
 </tr>
 <tr>
 <td>F</td>
@@ -640,31 +640,31 @@
 </tr>
 <tr>
 <td>0</td>
-<td>其他</td>
+<td>其它</td>
 </tr>
 </tbody>
 </table>
 <hr>
-<h2 id="_6-常见问题" tabindex="-1"><a class="header-anchor" href="#_6-常见问题"><span>6. 常见问题</span></a></h2>
-<h3 id="q-签名验证一直失败" tabindex="-1"><a class="header-anchor" href="#q-签名验证一直失败"><span>Q: 签名验证一直失败？</span></a></h3>
-<p>请检查以下几点：</p>
+<h2 id="_6-常見問題" tabindex="-1"><a class="header-anchor" href="#_6-常見問題"><span>6. 常見問題</span></a></h2>
+<h3 id="q-簽章驗證一直失敗" tabindex="-1"><a class="header-anchor" href="#q-簽章驗證一直失敗"><span>Q: 簽章驗證一直失敗？</span></a></h3>
+<p>請檢查以下幾點：</p>
 <ol>
-<li>确认 Secret Key 是否正确</li>
-<li>确认待签名字符串的拼接顺序和换行符</li>
-<li>确认时间戳是 <strong>秒级</strong> Unix 时间戳，不是毫秒</li>
-<li>确认请求体是原始 JSON 字符串，没有经过额外格式化</li>
-<li>确认服务器时钟准确</li>
+<li>確認 Secret Key 是否正確</li>
+<li>確認待簽章字串的串接順序和換行字元</li>
+<li>確認時間戳記是<strong>秒級</strong> Unix 時間戳記，不是毫秒</li>
+<li>確認請求主體是原始 JSON 字串，沒有經過額外格式化</li>
+<li>確認伺服器時鐘準確</li>
 </ol>
-<h3 id="q-webhook-收不到回调" tabindex="-1"><a class="header-anchor" href="#q-webhook-收不到回调"><span>Q: Webhook 收不到回调？</span></a></h3>
-<p>请检查：</p>
+<h3 id="q-webhook-收不到回呼" tabindex="-1"><a class="header-anchor" href="#q-webhook-收不到回呼"><span>Q: Webhook 收不到回呼？</span></a></h3>
+<p>請檢查：</p>
 <ol>
-<li>Webhook URL 是否能从公网访问</li>
-<li>防火墙是否放行了我方服务器 IP</li>
-<li>服务端是否正确返回了 HTTP 2xx 状态码</li>
-<li>回调处理是否在 30 秒内完成</li>
+<li>Webhook URL 是否能從公開網路存取</li>
+<li>防火牆是否放行了我方伺服器 IP</li>
+<li>伺服器端是否正確回傳了 HTTP 2xx 狀態碼</li>
+<li>回呼處理是否在 30 秒內完成</li>
 </ol>
-<h3 id="q-密钥泄露了怎么办" tabindex="-1"><a class="header-anchor" href="#q-密钥泄露了怎么办"><span>Q: 密钥泄露了怎么办？</span></a></h3>
-<p>请立即联系我们的技术人员，我们会在后台为您重新生成密钥。旧密钥将立即失效。</p>
+<h3 id="q-金鑰洩漏了怎麼辦" tabindex="-1"><a class="header-anchor" href="#q-金鑰洩漏了怎麼辦"><span>Q: 金鑰洩漏了怎麼辦？</span></a></h3>
+<p>請立即聯繫我們的技術人員，我們會在後台為您重新產生金鑰。舊金鑰將立即失效。</p>
 </div></template>
 
 

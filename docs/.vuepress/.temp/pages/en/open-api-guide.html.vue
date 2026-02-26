@@ -1,12 +1,12 @@
-<template><div><h1 id="open-api-对接指南" tabindex="-1"><a class="header-anchor" href="#open-api-对接指南"><span>Open API 对接指南</span></a></h1>
-<h2 id="_1-概述" tabindex="-1"><a class="header-anchor" href="#_1-概述"><span>1. 概述</span></a></h2>
-<p>本文档描述如何通过 Open API 与我们的虚拟账号平台进行集成，包括 API 请求签名、Webhook 回调验签等内容。</p>
-<h3 id="_1-1-基础信息" tabindex="-1"><a class="header-anchor" href="#_1-1-基础信息"><span>1.1 基础信息</span></a></h3>
+<template><div><h1 id="open-api-integration-guide" tabindex="-1"><a class="header-anchor" href="#open-api-integration-guide"><span>Open API Integration Guide</span></a></h1>
+<h2 id="_1-overview" tabindex="-1"><a class="header-anchor" href="#_1-overview"><span>1. Overview</span></a></h2>
+<p>This document describes how to integrate with our Virtual Account Platform via Open API, including API request signing and Webhook callback verification.</p>
+<h3 id="_1-1-basic-information" tabindex="-1"><a class="header-anchor" href="#_1-1-basic-information"><span>1.1 Basic Information</span></a></h3>
 <table>
 <thead>
 <tr>
-<th>项目</th>
-<th>说明</th>
+<th>Item</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
@@ -15,125 +15,125 @@
 <td><code v-pre>https://{host}/admin-api</code></td>
 </tr>
 <tr>
-<td>协议</td>
+<td>Protocol</td>
 <td>HTTPS</td>
 </tr>
 <tr>
-<td>数据格式</td>
+<td>Data Format</td>
 <td>JSON</td>
 </tr>
 <tr>
-<td>字符编码</td>
+<td>Encoding</td>
 <td>UTF-8</td>
 </tr>
 </tbody>
 </table>
-<h3 id="_1-2-密钥说明" tabindex="-1"><a class="header-anchor" href="#_1-2-密钥说明"><span>1.2 密钥说明</span></a></h3>
-<p>开通合作后，您将获得两组密钥：</p>
+<h3 id="_1-2-key-descriptions" tabindex="-1"><a class="header-anchor" href="#_1-2-key-descriptions"><span>1.2 Key Descriptions</span></a></h3>
+<p>After onboarding, you will receive two sets of keys:</p>
 <table>
 <thead>
 <tr>
-<th>密钥</th>
-<th>用途</th>
+<th>Key</th>
+<th>Purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><strong>Secret Key</strong></td>
-<td>用于 API 请求签名，证明请求来源的合法性</td>
+<td>Used for API request signing to verify the legitimacy of the request origin</td>
 </tr>
 <tr>
 <td><strong>Webhook Key</strong></td>
-<td>用于验证我方回调请求的真实性，防止伪造</td>
+<td>Used to verify the authenticity of our callback requests and prevent forgery</td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p>⚠️ 请妥善保管密钥，切勿在客户端代码、日志或版本控制中暴露。如果密钥泄露，请立即联系我们重新生成。</p>
+<p>⚠️ Keep your keys secure. Never expose them in client-side code, logs, or version control. If a key is compromised, contact us immediately to regenerate it.</p>
 </blockquote>
 <hr>
-<h2 id="_2-api-请求签名" tabindex="-1"><a class="header-anchor" href="#_2-api-请求签名"><span>2. API 请求签名</span></a></h2>
-<p>所有 Open API 请求都需要携带签名信息用于身份验证。</p>
-<h3 id="_2-1-请求头" tabindex="-1"><a class="header-anchor" href="#_2-1-请求头"><span>2.1 请求头</span></a></h3>
+<h2 id="_2-api-request-signing" tabindex="-1"><a class="header-anchor" href="#_2-api-request-signing"><span>2. API Request Signing</span></a></h2>
+<p>All Open API requests must include signature information for authentication.</p>
+<h3 id="_2-1-request-headers" tabindex="-1"><a class="header-anchor" href="#_2-1-request-headers"><span>2.1 Request Headers</span></a></h3>
 <table>
 <thead>
 <tr>
 <th>Header</th>
-<th>必填</th>
-<th>说明</th>
+<th>Required</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code v-pre>X-Api-Key</code></td>
-<td>是</td>
-<td>您的 Secret Key</td>
+<td>Yes</td>
+<td>Your Secret Key</td>
 </tr>
 <tr>
 <td><code v-pre>X-Api-Timestamp</code></td>
-<td>是</td>
-<td>当前 Unix 时间戳（秒）</td>
+<td>Yes</td>
+<td>Current Unix timestamp (seconds)</td>
 </tr>
 <tr>
 <td><code v-pre>X-Api-Signature</code></td>
-<td>是</td>
-<td>HMAC-SHA256 签名（Hex 编码）</td>
+<td>Yes</td>
+<td>HMAC-SHA256 signature (hex-encoded)</td>
 </tr>
 <tr>
 <td><code v-pre>Content-Type</code></td>
-<td>是</td>
+<td>Yes</td>
 <td><code v-pre>application/json</code></td>
 </tr>
 </tbody>
 </table>
-<h3 id="_2-2-签名算法" tabindex="-1"><a class="header-anchor" href="#_2-2-签名算法"><span>2.2 签名算法</span></a></h3>
-<p><strong>步骤 1：构造待签名字符串</strong></p>
+<h3 id="_2-2-signature-algorithm" tabindex="-1"><a class="header-anchor" href="#_2-2-signature-algorithm"><span>2.2 Signature Algorithm</span></a></h3>
+<p><strong>Step 1: Construct the string to sign</strong></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">StringToSign = HTTP_METHOD + "\n" + REQUEST_PATH + "\n" + TIMESTAMP + "\n" + REQUEST_BODY</span>
 <span class="line"></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><table>
 <thead>
 <tr>
-<th>部分</th>
-<th>说明</th>
-<th>示例</th>
+<th>Part</th>
+<th>Description</th>
+<th>Example</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>HTTP_METHOD</td>
-<td>大写 HTTP 方法</td>
+<td>Uppercase HTTP method</td>
 <td><code v-pre>POST</code></td>
 </tr>
 <tr>
 <td>REQUEST_PATH</td>
-<td>请求路径（不含域名和查询参数）</td>
+<td>Request path (without domain and query parameters)</td>
 <td><code v-pre>/admin-api/bank/open/virtual-account/create</code></td>
 </tr>
 <tr>
 <td>TIMESTAMP</td>
-<td>与 <code v-pre>X-Api-Timestamp</code> 一致</td>
+<td>Same as <code v-pre>X-Api-Timestamp</code></td>
 <td><code v-pre>1708862400</code></td>
 </tr>
 <tr>
 <td>REQUEST_BODY</td>
-<td>完整的请求体 JSON 字符串，无请求体时为空字符串</td>
+<td>Complete request body JSON string; empty string if no body</td>
 <td><code v-pre>{&quot;type&quot;:1,&quot;amount&quot;:1000}</code></td>
 </tr>
 </tbody>
 </table>
 <blockquote>
-<p>注意：各部分之间使用 <code v-pre>\n</code>（换行符）连接。</p>
+<p>Note: Parts are joined with <code v-pre>\n</code> (newline character).</p>
 </blockquote>
-<p><strong>步骤 2：计算 HMAC-SHA256</strong></p>
+<p><strong>Step 2: Compute HMAC-SHA256</strong></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">Signature = Hex( HMAC-SHA256( SecretKey, StringToSign ) )</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>使用您的 Secret Key 作为 HMAC 密钥，对待签名字符串进行 HMAC-SHA256 运算，然后将结果转为十六进制小写字符串。</p>
-<h3 id="_2-3-时间戳验证" tabindex="-1"><a class="header-anchor" href="#_2-3-时间戳验证"><span>2.3 时间戳验证</span></a></h3>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>Use your Secret Key as the HMAC key to perform HMAC-SHA256 on the string to sign, then convert the result to a lowercase hexadecimal string.</p>
+<h3 id="_2-3-timestamp-validation" tabindex="-1"><a class="header-anchor" href="#_2-3-timestamp-validation"><span>2.3 Timestamp Validation</span></a></h3>
 <ul>
-<li>服务端会验证时间戳与当前时间的偏差，允许范围为 <strong>±5 分钟</strong></li>
-<li>请确保您的服务器时钟与 NTP 服务器同步</li>
+<li>The server validates the timestamp deviation from the current time, with an allowed range of <strong>±5 minutes</strong></li>
+<li>Please ensure your server clock is synchronized with an NTP server</li>
 </ul>
-<h3 id="_2-4-完整请求示例" tabindex="-1"><a class="header-anchor" href="#_2-4-完整请求示例"><span>2.4 完整请求示例</span></a></h3>
+<h3 id="_2-4-complete-request-example" tabindex="-1"><a class="header-anchor" href="#_2-4-complete-request-example"><span>2.4 Complete Request Example</span></a></h3>
 <div class="language-http line-numbers-mode" data-highlighter="prismjs" data-ext="http"><pre v-pre><code><span class="line"><span class="token request-line"><span class="token method property">POST</span> <span class="token request-target url">/admin-api/bank/open/virtual-account/create</span> <span class="token http-version property">HTTP/1.1</span></span></span>
 <span class="line"><span class="token header"><span class="token header-name keyword">Host</span><span class="token punctuation">:</span> <span class="token header-value">api.example.com</span></span></span>
 <span class="line"><span class="token header"><span class="token header-name keyword">Content-Type</span><span class="token punctuation">:</span> <span class="token header-value">application/json</span></span></span>
@@ -141,9 +141,9 @@
 <span class="line"><span class="token header"><span class="token header-name keyword">X-Api-Timestamp</span><span class="token punctuation">:</span> <span class="token header-value">1708862400</span></span></span>
 <span class="line"><span class="token header"><span class="token header-name keyword">X-Api-Signature</span><span class="token punctuation">:</span> <span class="token header-value">9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08</span></span></span>
 <span class="line"><span class="token application-json"></span>
-<span class="line"><span class="token punctuation">{</span><span class="token property">"type"</span><span class="token operator">:</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token property">"amount"</span><span class="token operator">:</span><span class="token number">1000</span><span class="token punctuation">,</span><span class="token property">"expireDate"</span><span class="token operator">:</span><span class="token string">"2025-12-31T23:59:59"</span><span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">{</span><span class="token string-property property">"type"</span><span class="token operator">:</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token string-property property">"amount"</span><span class="token operator">:</span><span class="token number">1000</span><span class="token punctuation">,</span><span class="token string-property property">"expireDate"</span><span class="token operator">:</span><span class="token string">"2025-12-31T23:59:59"</span><span class="token punctuation">}</span></span>
 <span class="line"></span></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="_2-5-代码示例" tabindex="-1"><a class="header-anchor" href="#_2-5-代码示例"><span>2.5 代码示例</span></a></h3>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="_2-5-code-samples" tabindex="-1"><a class="header-anchor" href="#_2-5-code-samples"><span>2.5 Code Samples</span></a></h3>
 <h4 id="java" tabindex="-1"><a class="header-anchor" href="#java"><span>Java</span></a></h4>
 <div class="language-java line-numbers-mode" data-highlighter="prismjs" data-ext="java"><pre v-pre><code><span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>crypto<span class="token punctuation">.</span></span><span class="token class-name">Mac</span></span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>crypto<span class="token punctuation">.</span>spec<span class="token punctuation">.</span></span><span class="token class-name">SecretKeySpec</span></span><span class="token punctuation">;</span></span>
@@ -184,7 +184,7 @@
 <span class="line">    <span class="token punctuation">)</span><span class="token punctuation">.</span>hexdigest<span class="token punctuation">(</span><span class="token punctuation">)</span></span>
 <span class="line">    <span class="token keyword">return</span> signature</span>
 <span class="line"></span>
-<span class="line"><span class="token comment"># 使用示例</span></span>
+<span class="line"><span class="token comment"># Usage example</span></span>
 <span class="line">secret_key <span class="token operator">=</span> <span class="token string">"your_secret_key_here"</span></span>
 <span class="line">method <span class="token operator">=</span> <span class="token string">"POST"</span></span>
 <span class="line">path <span class="token operator">=</span> <span class="token string">"/admin-api/bank/open/virtual-account/create"</span></span>
@@ -217,7 +217,7 @@
 <span class="line">        <span class="token punctuation">.</span><span class="token function">digest</span><span class="token punctuation">(</span><span class="token string">'hex'</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span>
-<span class="line"><span class="token comment">// 使用示例</span></span>
+<span class="line"><span class="token comment">// Usage example</span></span>
 <span class="line"><span class="token keyword">const</span> secretKey <span class="token operator">=</span> <span class="token string">'your_secret_key_here'</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">const</span> method <span class="token operator">=</span> <span class="token string">'POST'</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token string">'/admin-api/bank/open/virtual-account/create'</span><span class="token punctuation">;</span></span>
@@ -243,7 +243,7 @@
 <span class="line">    <span class="token keyword">return</span> <span class="token function">hash_hmac</span><span class="token punctuation">(</span><span class="token string single-quoted-string">'sha256'</span><span class="token punctuation">,</span> <span class="token variable">$stringToSign</span><span class="token punctuation">,</span> <span class="token variable">$secretKey</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span>
-<span class="line"><span class="token comment">// 使用示例</span></span>
+<span class="line"><span class="token comment">// Usage example</span></span>
 <span class="line"><span class="token variable">$secretKey</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'your_secret_key_here'</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token variable">$method</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'POST'</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token variable">$path</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'/admin-api/bank/open/virtual-account/create'</span><span class="token punctuation">;</span></span>
@@ -269,8 +269,8 @@
 <span class="line"><span class="token keyword">echo</span> <span class="token variable">$response</span><span class="token punctuation">;</span></span>
 <span class="line"></span></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><hr>
-<h2 id="_3-api-响应格式" tabindex="-1"><a class="header-anchor" href="#_3-api-响应格式"><span>3. API 响应格式</span></a></h2>
-<p>所有 API 接口统一返回以下 JSON 格式：</p>
+<h2 id="_3-api-response-format" tabindex="-1"><a class="header-anchor" href="#_3-api-response-format"><span>3. API Response Format</span></a></h2>
+<p>All API endpoints return a unified JSON format:</p>
 <div class="language-json line-numbers-mode" data-highlighter="prismjs" data-ext="json"><pre v-pre><code><span class="line"><span class="token punctuation">{</span></span>
 <span class="line">    <span class="token property">"code"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span></span>
 <span class="line">    <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span> <span class="token punctuation">}</span><span class="token punctuation">,</span></span>
@@ -280,83 +280,83 @@
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><table>
 <thead>
 <tr>
-<th>字段</th>
-<th>类型</th>
-<th>说明</th>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>code</td>
 <td>Integer</td>
-<td>状态码，<code v-pre>0</code> 表示成功</td>
+<td>Status code, <code v-pre>0</code> indicates success</td>
 </tr>
 <tr>
 <td>data</td>
 <td>Object</td>
-<td>业务数据</td>
+<td>Business data</td>
 </tr>
 <tr>
 <td>msg</td>
 <td>String</td>
-<td>错误信息（成功时为空字符串）</td>
+<td>Error message (empty string on success)</td>
 </tr>
 </tbody>
 </table>
-<h3 id="_3-1-错误码" tabindex="-1"><a class="header-anchor" href="#_3-1-错误码"><span>3.1 错误码</span></a></h3>
+<h3 id="_3-1-error-codes" tabindex="-1"><a class="header-anchor" href="#_3-1-error-codes"><span>3.1 Error Codes</span></a></h3>
 <table>
 <thead>
 <tr>
-<th>错误码</th>
-<th>说明</th>
+<th>Error Code</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>0</td>
-<td>成功</td>
+<td>Success</td>
 </tr>
 <tr>
 <td>1009001003</td>
-<td>无效的 API Key</td>
+<td>Invalid API Key</td>
 </tr>
 <tr>
 <td>1009001004</td>
-<td>签名验证失败</td>
+<td>Signature verification failed</td>
 </tr>
 <tr>
 <td>1009001005</td>
-<td>请求时间戳已过期</td>
+<td>Request timestamp expired</td>
 </tr>
 <tr>
 <td>1009001006</td>
-<td>缺少必要的鉴权请求头</td>
+<td>Missing required authentication headers</td>
 </tr>
 <tr>
 <td>1009001002</td>
-<td>客户已被禁用</td>
+<td>Merchant has been disabled</td>
 </tr>
 </tbody>
 </table>
 <hr>
-<h2 id="_4-webhook-回调" tabindex="-1"><a class="header-anchor" href="#_4-webhook-回调"><span>4. Webhook 回调</span></a></h2>
-<p>当虚拟账号收到入金时，我们会向您配置的 Webhook URL 发送 HTTP POST 通知。</p>
-<h3 id="_4-1-回调请求头" tabindex="-1"><a class="header-anchor" href="#_4-1-回调请求头"><span>4.1 回调请求头</span></a></h3>
+<h2 id="_4-webhook-callbacks" tabindex="-1"><a class="header-anchor" href="#_4-webhook-callbacks"><span>4. Webhook Callbacks</span></a></h2>
+<p>When a virtual account receives a deposit, we will send an HTTP POST notification to your configured Webhook URL.</p>
+<h3 id="_4-1-callback-request-headers" tabindex="-1"><a class="header-anchor" href="#_4-1-callback-request-headers"><span>4.1 Callback Request Headers</span></a></h3>
 <table>
 <thead>
 <tr>
 <th>Header</th>
-<th>说明</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td><code v-pre>X-Webhook-Signature</code></td>
-<td>签名信息，格式：<code v-pre>t={timestamp},v1={signature}</code></td>
+<td>Signature information, format: <code v-pre>t={timestamp},v1={signature}</code></td>
 </tr>
 <tr>
 <td><code v-pre>X-Webhook-Event</code></td>
-<td>事件类型，如 <code v-pre>deposit.completed</code></td>
+<td>Event type, e.g. <code v-pre>deposit.completed</code></td>
 </tr>
 <tr>
 <td><code v-pre>Content-Type</code></td>
@@ -364,59 +364,59 @@
 </tr>
 </tbody>
 </table>
-<h3 id="_4-2-签名验证" tabindex="-1"><a class="header-anchor" href="#_4-2-签名验证"><span>4.2 签名验证</span></a></h3>
-<p><strong>步骤 1：解析签名头</strong></p>
-<p>从 <code v-pre>X-Webhook-Signature</code> 中提取 <code v-pre>t</code>（时间戳）和 <code v-pre>v1</code>（签名）：</p>
+<h3 id="_4-2-signature-verification" tabindex="-1"><a class="header-anchor" href="#_4-2-signature-verification"><span>4.2 Signature Verification</span></a></h3>
+<p><strong>Step 1: Parse the signature header</strong></p>
+<p>Extract <code v-pre>t</code> (timestamp) and <code v-pre>v1</code> (signature) from <code v-pre>X-Webhook-Signature</code>:</p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">X-Webhook-Signature: t=1708862400,v1=a1b2c3d4e5f6...</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p><strong>步骤 2：构造待签名字符串</strong></p>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p><strong>Step 2: Construct the string to sign</strong></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">StringToSign = TIMESTAMP + "." + REQUEST_BODY</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>其中 <code v-pre>TIMESTAMP</code> 是从签名头中提取的 <code v-pre>t</code> 值，<code v-pre>REQUEST_BODY</code> 是原始的请求体字符串。</p>
-<p><strong>步骤 3：计算签名并比对</strong></p>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>Where <code v-pre>TIMESTAMP</code> is the <code v-pre>t</code> value extracted from the signature header, and <code v-pre>REQUEST_BODY</code> is the raw request body string.</p>
+<p><strong>Step 3: Compute and compare the signature</strong></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">ExpectedSignature = Hex( HMAC-SHA256( WebhookKey, StringToSign ) )</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>比较计算结果与 <code v-pre>v1</code> 值是否一致。</p>
-<p><strong>步骤 4：防重放验证（推荐）</strong></p>
-<p>检查 <code v-pre>t</code> 时间戳与当前时间的差值，建议拒绝超过 5 分钟的回调。</p>
-<h3 id="_4-3-回调响应" tabindex="-1"><a class="header-anchor" href="#_4-3-回调响应"><span>4.3 回调响应</span></a></h3>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>Compare the computed result with the <code v-pre>v1</code> value.</p>
+<p><strong>Step 4: Replay attack prevention (recommended)</strong></p>
+<p>Check the difference between the <code v-pre>t</code> timestamp and the current time. It is recommended to reject callbacks older than 5 minutes.</p>
+<h3 id="_4-3-callback-response" tabindex="-1"><a class="header-anchor" href="#_4-3-callback-response"><span>4.3 Callback Response</span></a></h3>
 <ul>
-<li>返回 HTTP 状态码 <code v-pre>2xx</code> 视为接收成功</li>
-<li>返回其他状态码或超时（30 秒）视为失败，将触发重试</li>
+<li>Return HTTP status code <code v-pre>2xx</code> to indicate successful receipt</li>
+<li>Any other status code or timeout (30 seconds) is considered a failure and will trigger a retry</li>
 </ul>
-<h3 id="_4-4-重试策略" tabindex="-1"><a class="header-anchor" href="#_4-4-重试策略"><span>4.4 重试策略</span></a></h3>
+<h3 id="_4-4-retry-strategy" tabindex="-1"><a class="header-anchor" href="#_4-4-retry-strategy"><span>4.4 Retry Strategy</span></a></h3>
 <table>
 <thead>
 <tr>
-<th>重试次数</th>
-<th>延迟</th>
+<th>Retry Attempt</th>
+<th>Delay</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>第 1 次</td>
-<td>30 秒</td>
+<td>1st</td>
+<td>30 seconds</td>
 </tr>
 <tr>
-<td>第 2 次</td>
-<td>2 分钟</td>
+<td>2nd</td>
+<td>2 minutes</td>
 </tr>
 <tr>
-<td>第 3 次</td>
-<td>10 分钟</td>
+<td>3rd</td>
+<td>10 minutes</td>
 </tr>
 <tr>
-<td>第 4 次</td>
-<td>1 小时</td>
+<td>4th</td>
+<td>1 hour</td>
 </tr>
 <tr>
-<td>第 5 次</td>
-<td>6 小时</td>
+<td>5th</td>
+<td>6 hours</td>
 </tr>
 </tbody>
 </table>
-<p>超过 5 次重试仍失败，将停止重试并标记为最终失败。</p>
-<h3 id="_4-5-webhook-验签代码示例" tabindex="-1"><a class="header-anchor" href="#_4-5-webhook-验签代码示例"><span>4.5 Webhook 验签代码示例</span></a></h3>
+<p>After 5 failed retries, the system will stop retrying and mark it as a final failure.</p>
+<h3 id="_4-5-webhook-verification-code-samples" tabindex="-1"><a class="header-anchor" href="#_4-5-webhook-verification-code-samples"><span>4.5 Webhook Verification Code Samples</span></a></h3>
 <h4 id="java-1" tabindex="-1"><a class="header-anchor" href="#java-1"><span>Java</span></a></h4>
 <div class="language-java line-numbers-mode" data-highlighter="prismjs" data-ext="java"><pre v-pre><code><span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>crypto<span class="token punctuation">.</span></span><span class="token class-name">Mac</span></span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>crypto<span class="token punctuation">.</span>spec<span class="token punctuation">.</span></span><span class="token class-name">SecretKeySpec</span></span><span class="token punctuation">;</span></span>
@@ -525,10 +525,10 @@
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><hr>
-<h2 id="_5-事件类型" tabindex="-1"><a class="header-anchor" href="#_5-事件类型"><span>5. 事件类型</span></a></h2>
-<h3 id="_5-1-deposit-completed-入金完成" tabindex="-1"><a class="header-anchor" href="#_5-1-deposit-completed-入金完成"><span>5.1 deposit.completed - 入金完成</span></a></h3>
-<p>当虚拟账号收到入金后触发。</p>
-<p><strong>Payload 示例：</strong></p>
+<h2 id="_5-event-types" tabindex="-1"><a class="header-anchor" href="#_5-event-types"><span>5. Event Types</span></a></h2>
+<h3 id="_5-1-deposit-completed-deposit-completed" tabindex="-1"><a class="header-anchor" href="#_5-1-deposit-completed-deposit-completed"><span>5.1 deposit.completed - Deposit Completed</span></a></h3>
+<p>Triggered when a virtual account receives a deposit.</p>
+<p><strong>Payload Example:</strong></p>
 <div class="language-json line-numbers-mode" data-highlighter="prismjs" data-ext="json"><pre v-pre><code><span class="line"><span class="token punctuation">{</span></span>
 <span class="line">    <span class="token property">"accountNo"</span><span class="token operator">:</span> <span class="token string">"1234567890123456"</span><span class="token punctuation">,</span></span>
 <span class="line">    <span class="token property">"amount"</span><span class="token operator">:</span> <span class="token string">"50000"</span><span class="token punctuation">,</span></span>
@@ -542,77 +542,77 @@
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><table>
 <thead>
 <tr>
-<th>字段</th>
-<th>类型</th>
-<th>说明</th>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>accountNo</td>
 <td>String</td>
-<td>虚拟账号</td>
+<td>Virtual account number</td>
 </tr>
 <tr>
 <td>amount</td>
 <td>String</td>
-<td>入金金额</td>
+<td>Deposit amount</td>
 </tr>
 <tr>
 <td>currency</td>
 <td>String</td>
-<td>币别（默认 <code v-pre>TWD</code>，可能值：<code v-pre>TWD</code> / <code v-pre>USD</code>）</td>
+<td>Currency (default <code v-pre>TWD</code>, possible values: <code v-pre>TWD</code> / <code v-pre>USD</code>)</td>
 </tr>
 <tr>
 <td>transactionDate</td>
 <td>String</td>
-<td>交易日期 (yyyyMMdd)</td>
+<td>Transaction date (yyyyMMdd)</td>
 </tr>
 <tr>
 <td>transactionTime</td>
 <td>String</td>
-<td>交易时间 (HHmmss)</td>
+<td>Transaction time (HHmmss)</td>
 </tr>
 <tr>
 <td>type</td>
 <td>String</td>
-<td>交易类型（见下方说明）</td>
+<td>Transaction type (see table below)</td>
 </tr>
 <tr>
 <td>seqNo</td>
 <td>String</td>
-<td>交易序号</td>
+<td>Transaction sequence number</td>
 </tr>
 </tbody>
 </table>
-<p><strong>交易类型 (type) 代码说明：</strong></p>
+<p><strong>Transaction Type (type) Codes:</strong></p>
 <table>
 <thead>
 <tr>
-<th>代码</th>
-<th>说明</th>
+<th>Code</th>
+<th>Description</th>
 </tr>
 </thead>
 <tbody>
 <tr>
 <td>A</td>
-<td>临柜</td>
+<td>Over-the-counter</td>
 </tr>
 <tr>
 <td>B / P</td>
-<td>语音</td>
+<td>Voice banking</td>
 </tr>
 <tr>
 <td>C</td>
-<td>网银</td>
+<td>Internet banking</td>
 </tr>
 <tr>
 <td>D</td>
-<td>行动银行</td>
+<td>Mobile banking</td>
 </tr>
 <tr>
 <td>E / R</td>
-<td>汇款</td>
+<td>Wire transfer</td>
 </tr>
 <tr>
 <td>F</td>
@@ -640,31 +640,31 @@
 </tr>
 <tr>
 <td>0</td>
-<td>其他</td>
+<td>Other</td>
 </tr>
 </tbody>
 </table>
 <hr>
-<h2 id="_6-常见问题" tabindex="-1"><a class="header-anchor" href="#_6-常见问题"><span>6. 常见问题</span></a></h2>
-<h3 id="q-签名验证一直失败" tabindex="-1"><a class="header-anchor" href="#q-签名验证一直失败"><span>Q: 签名验证一直失败？</span></a></h3>
-<p>请检查以下几点：</p>
+<h2 id="_6-faq" tabindex="-1"><a class="header-anchor" href="#_6-faq"><span>6. FAQ</span></a></h2>
+<h3 id="q-signature-verification-keeps-failing" tabindex="-1"><a class="header-anchor" href="#q-signature-verification-keeps-failing"><span>Q: Signature verification keeps failing?</span></a></h3>
+<p>Please check the following:</p>
 <ol>
-<li>确认 Secret Key 是否正确</li>
-<li>确认待签名字符串的拼接顺序和换行符</li>
-<li>确认时间戳是 <strong>秒级</strong> Unix 时间戳，不是毫秒</li>
-<li>确认请求体是原始 JSON 字符串，没有经过额外格式化</li>
-<li>确认服务器时钟准确</li>
+<li>Verify that your Secret Key is correct</li>
+<li>Verify the concatenation order and newline characters in the string to sign</li>
+<li>Verify the timestamp is a <strong>second-level</strong> Unix timestamp, not milliseconds</li>
+<li>Verify the request body is the raw JSON string without additional formatting</li>
+<li>Verify your server clock is accurate</li>
 </ol>
-<h3 id="q-webhook-收不到回调" tabindex="-1"><a class="header-anchor" href="#q-webhook-收不到回调"><span>Q: Webhook 收不到回调？</span></a></h3>
-<p>请检查：</p>
+<h3 id="q-not-receiving-webhook-callbacks" tabindex="-1"><a class="header-anchor" href="#q-not-receiving-webhook-callbacks"><span>Q: Not receiving Webhook callbacks?</span></a></h3>
+<p>Please check:</p>
 <ol>
-<li>Webhook URL 是否能从公网访问</li>
-<li>防火墙是否放行了我方服务器 IP</li>
-<li>服务端是否正确返回了 HTTP 2xx 状态码</li>
-<li>回调处理是否在 30 秒内完成</li>
+<li>Whether the Webhook URL is accessible from the public internet</li>
+<li>Whether the firewall allows traffic from our server IPs</li>
+<li>Whether the server correctly returns an HTTP 2xx status code</li>
+<li>Whether the callback processing completes within 30 seconds</li>
 </ol>
-<h3 id="q-密钥泄露了怎么办" tabindex="-1"><a class="header-anchor" href="#q-密钥泄露了怎么办"><span>Q: 密钥泄露了怎么办？</span></a></h3>
-<p>请立即联系我们的技术人员，我们会在后台为您重新生成密钥。旧密钥将立即失效。</p>
+<h3 id="q-what-if-a-key-is-compromised" tabindex="-1"><a class="header-anchor" href="#q-what-if-a-key-is-compromised"><span>Q: What if a key is compromised?</span></a></h3>
+<p>Contact our technical team immediately. We will regenerate your keys in the admin panel. The old keys will be invalidated immediately.</p>
 </div></template>
 
 

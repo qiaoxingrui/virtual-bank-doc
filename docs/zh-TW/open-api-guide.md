@@ -1,75 +1,75 @@
-# Open API 对接指南
+# Open API 串接指南
 
 ## 1. 概述
 
-本文档描述如何通过 Open API 与我们的虚拟账号平台进行集成，包括 API 请求签名、Webhook 回调验签等内容。
+本文件說明如何透過 Open API 與我們的虛擬帳號平台進行串接，包含 API 請求簽章、Webhook 回呼驗章等內容。
 
-### 1.1 基础信息
+### 1.1 基本資訊
 
-| 项目 | 说明 |
+| 項目 | 說明 |
 |---|---|
 | Base URL | `https://{host}/admin-api` |
-| 协议 | HTTPS |
-| 数据格式 | JSON |
-| 字符编码 | UTF-8 |
+| 通訊協定 | HTTPS |
+| 資料格式 | JSON |
+| 字元編碼 | UTF-8 |
 
-### 1.2 密钥说明
+### 1.2 金鑰說明
 
-开通合作后，您将获得两组密钥：
+開通合作後，您將取得兩組金鑰：
 
-| 密钥 | 用途 |
+| 金鑰 | 用途 |
 |---|---|
-| **Secret Key** | 用于 API 请求签名，证明请求来源的合法性 |
-| **Webhook Key** | 用于验证我方回调请求的真实性，防止伪造 |
+| **Secret Key** | 用於 API 請求簽章，證明請求來源的合法性 |
+| **Webhook Key** | 用於驗證我方回呼請求的真實性，防止偽造 |
 
-> ⚠️ 请妥善保管密钥，切勿在客户端代码、日志或版本控制中暴露。如果密钥泄露，请立即联系我们重新生成。
+> ⚠️ 請妥善保管金鑰，切勿在用戶端程式碼、日誌或版本控制中暴露。若金鑰洩漏，請立即聯繫我們重新產生。
 
 ---
 
-## 2. API 请求签名
+## 2. API 請求簽章
 
-所有 Open API 请求都需要携带签名信息用于身份验证。
+所有 Open API 請求都需要攜帶簽章資訊用於身分驗證。
 
-### 2.1 请求头
+### 2.1 請求標頭
 
-| Header | 必填 | 说明 |
+| Header | 必填 | 說明 |
 |---|---|---|
 | `X-Api-Key` | 是 | 您的 Secret Key |
-| `X-Api-Timestamp` | 是 | 当前 Unix 时间戳（秒） |
-| `X-Api-Signature` | 是 | HMAC-SHA256 签名（Hex 编码） |
+| `X-Api-Timestamp` | 是 | 目前 Unix 時間戳記（秒） |
+| `X-Api-Signature` | 是 | HMAC-SHA256 簽章（Hex 編碼） |
 | `Content-Type` | 是 | `application/json` |
 
-### 2.2 签名算法
+### 2.2 簽章演算法
 
-**步骤 1：构造待签名字符串**
+**步驟 1：建構待簽章字串**
 
 ```
 StringToSign = HTTP_METHOD + "\n" + REQUEST_PATH + "\n" + TIMESTAMP + "\n" + REQUEST_BODY
 ```
 
-| 部分 | 说明 | 示例 |
+| 部分 | 說明 | 範例 |
 |---|---|---|
-| HTTP_METHOD | 大写 HTTP 方法 | `POST` |
-| REQUEST_PATH | 请求路径（不含域名和查询参数） | `/admin-api/bank/open/virtual-account/create` |
-| TIMESTAMP | 与 `X-Api-Timestamp` 一致 | `1708862400` |
-| REQUEST_BODY | 完整的请求体 JSON 字符串，无请求体时为空字符串 | `{"type":1,"amount":1000}` |
+| HTTP_METHOD | 大寫 HTTP 方法 | `POST` |
+| REQUEST_PATH | 請求路徑（不含網域名稱和查詢參數） | `/admin-api/bank/open/virtual-account/create` |
+| TIMESTAMP | 與 `X-Api-Timestamp` 一致 | `1708862400` |
+| REQUEST_BODY | 完整的請求主體 JSON 字串，無請求主體時為空字串 | `{"type":1,"amount":1000}` |
 
-> 注意：各部分之间使用 `\n`（换行符）连接。
+> 注意：各部分之間使用 `\n`（換行字元）串接。
 
-**步骤 2：计算 HMAC-SHA256**
+**步驟 2：計算 HMAC-SHA256**
 
 ```
 Signature = Hex( HMAC-SHA256( SecretKey, StringToSign ) )
 ```
 
-使用您的 Secret Key 作为 HMAC 密钥，对待签名字符串进行 HMAC-SHA256 运算，然后将结果转为十六进制小写字符串。
+使用您的 Secret Key 作為 HMAC 金鑰，對待簽章字串進行 HMAC-SHA256 運算，然後將結果轉為十六進位小寫字串。
 
-### 2.3 时间戳验证
+### 2.3 時間戳記驗證
 
-- 服务端会验证时间戳与当前时间的偏差，允许范围为 **±5 分钟**
-- 请确保您的服务器时钟与 NTP 服务器同步
+- 伺服器端會驗證時間戳記與目前時間的偏差，容許範圍為 **±5 分鐘**
+- 請確保您的伺服器時鐘與 NTP 伺服器同步
 
-### 2.4 完整请求示例
+### 2.4 完整請求範例
 
 ```http
 POST /admin-api/bank/open/virtual-account/create HTTP/1.1
@@ -82,7 +82,7 @@ X-Api-Signature: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a0
 {"type":1,"amount":1000,"expireDate":"2025-12-31T23:59:59"}
 ```
 
-### 2.5 代码示例
+### 2.5 程式碼範例
 
 #### Java
 
@@ -129,7 +129,7 @@ def sign_request(secret_key: str, method: str, path: str,
     ).hexdigest()
     return signature
 
-# 使用示例
+# 使用範例
 secret_key = "your_secret_key_here"
 method = "POST"
 path = "/admin-api/bank/open/virtual-account/create"
@@ -165,7 +165,7 @@ function signRequest(secretKey, method, path, timestamp, body = '') {
         .digest('hex');
 }
 
-// 使用示例
+// 使用範例
 const secretKey = 'your_secret_key_here';
 const method = 'POST';
 const path = '/admin-api/bank/open/virtual-account/create';
@@ -194,7 +194,7 @@ function signRequest(string $secretKey, string $method, string $path,
     return hash_hmac('sha256', $stringToSign, $secretKey);
 }
 
-// 使用示例
+// 使用範例
 $secretKey = 'your_secret_key_here';
 $method = 'POST';
 $path = '/admin-api/bank/open/virtual-account/create';
@@ -222,9 +222,9 @@ echo $response;
 
 ---
 
-## 3. API 响应格式
+## 3. API 回應格式
 
-所有 API 接口统一返回以下 JSON 格式：
+所有 API 介面統一回傳以下 JSON 格式：
 
 ```json
 {
@@ -234,85 +234,85 @@ echo $response;
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| 欄位 | 類型 | 說明 |
 |---|---|---|
-| code | Integer | 状态码，`0` 表示成功 |
-| data | Object | 业务数据 |
-| msg | String | 错误信息（成功时为空字符串） |
+| code | Integer | 狀態碼，`0` 表示成功 |
+| data | Object | 業務資料 |
+| msg | String | 錯誤訊息（成功時為空字串） |
 
-### 3.1 错误码
+### 3.1 錯誤碼
 
-| 错误码 | 说明 |
+| 錯誤碼 | 說明 |
 |---|---|
 | 0 | 成功 |
-| 1009001003 | 无效的 API Key |
-| 1009001004 | 签名验证失败 |
-| 1009001005 | 请求时间戳已过期 |
-| 1009001006 | 缺少必要的鉴权请求头 |
-| 1009001002 | 客户已被禁用 |
+| 1009001003 | 無效的 API Key |
+| 1009001004 | 簽章驗證失敗 |
+| 1009001005 | 請求時間戳記已過期 |
+| 1009001006 | 缺少必要的驗證請求標頭 |
+| 1009001002 | 客戶已被停用 |
 
 ---
 
-## 4. Webhook 回调
+## 4. Webhook 回呼
 
-当虚拟账号收到入金时，我们会向您配置的 Webhook URL 发送 HTTP POST 通知。
+當虛擬帳號收到入金時，我們會向您設定的 Webhook URL 傳送 HTTP POST 通知。
 
-### 4.1 回调请求头
+### 4.1 回呼請求標頭
 
-| Header | 说明 |
+| Header | 說明 |
 |---|---|
-| `X-Webhook-Signature` | 签名信息，格式：`t={timestamp},v1={signature}` |
-| `X-Webhook-Event` | 事件类型，如 `deposit.completed` |
+| `X-Webhook-Signature` | 簽章資訊，格式：`t={timestamp},v1={signature}` |
+| `X-Webhook-Event` | 事件類型，如 `deposit.completed` |
 | `Content-Type` | `application/json` |
 
-### 4.2 签名验证
+### 4.2 簽章驗證
 
-**步骤 1：解析签名头**
+**步驟 1：解析簽章標頭**
 
-从 `X-Webhook-Signature` 中提取 `t`（时间戳）和 `v1`（签名）：
+從 `X-Webhook-Signature` 中擷取 `t`（時間戳記）和 `v1`（簽章）：
 
 ```
 X-Webhook-Signature: t=1708862400,v1=a1b2c3d4e5f6...
 ```
 
-**步骤 2：构造待签名字符串**
+**步驟 2：建構待簽章字串**
 
 ```
 StringToSign = TIMESTAMP + "." + REQUEST_BODY
 ```
 
-其中 `TIMESTAMP` 是从签名头中提取的 `t` 值，`REQUEST_BODY` 是原始的请求体字符串。
+其中 `TIMESTAMP` 是從簽章標頭中擷取的 `t` 值，`REQUEST_BODY` 是原始的請求主體字串。
 
-**步骤 3：计算签名并比对**
+**步驟 3：計算簽章並比對**
 
 ```
 ExpectedSignature = Hex( HMAC-SHA256( WebhookKey, StringToSign ) )
 ```
 
-比较计算结果与 `v1` 值是否一致。
+比較計算結果與 `v1` 值是否一致。
 
-**步骤 4：防重放验证（推荐）**
+**步驟 4：防重送驗證（建議）**
 
-检查 `t` 时间戳与当前时间的差值，建议拒绝超过 5 分钟的回调。
+檢查 `t` 時間戳記與目前時間的差值，建議拒絕超過 5 分鐘的回呼。
 
-### 4.3 回调响应
+### 4.3 回呼回應
 
-- 返回 HTTP 状态码 `2xx` 视为接收成功
-- 返回其他状态码或超时（30 秒）视为失败，将触发重试
+- 回傳 HTTP 狀態碼 `2xx` 視為接收成功
+- 回傳其他狀態碼或逾時（30 秒）視為失敗，將觸發重試
 
-### 4.4 重试策略
+### 4.4 重試策略
 
-| 重试次数 | 延迟 |
+| 重試次數 | 延遲 |
 |---|---|
 | 第 1 次 | 30 秒 |
-| 第 2 次 | 2 分钟 |
-| 第 3 次 | 10 分钟 |
-| 第 4 次 | 1 小时 |
-| 第 5 次 | 6 小时 |
+| 第 2 次 | 2 分鐘 |
+| 第 3 次 | 10 分鐘 |
+| 第 4 次 | 1 小時 |
+| 第 5 次 | 6 小時 |
 
-超过 5 次重试仍失败，将停止重试并标记为最终失败。
+超過 5 次重試仍失敗，將停止重試並標記為最終失敗。
 
-### 4.5 Webhook 验签代码示例
+### 4.5 Webhook 驗章程式碼範例
 
 #### Java
 
@@ -435,13 +435,13 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 
 ---
 
-## 5. 事件类型
+## 5. 事件類型
 
 ### 5.1 deposit.completed - 入金完成
 
-当虚拟账号收到入金后触发。
+當虛擬帳號收到入金後觸發。
 
-**Payload 示例：**
+**Payload 範例：**
 
 ```json
 {
@@ -455,54 +455,54 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 }
 ```
 
-| 字段 | 类型 | 说明 |
+| 欄位 | 類型 | 說明 |
 |---|---|---|
-| accountNo | String | 虚拟账号 |
-| amount | String | 入金金额 |
-| currency | String | 币别（默认 `TWD`，可能值：`TWD` / `USD`） |
+| accountNo | String | 虛擬帳號 |
+| amount | String | 入金金額 |
+| currency | String | 幣別（預設 `TWD`，可能值：`TWD` / `USD`） |
 | transactionDate | String | 交易日期 (yyyyMMdd) |
-| transactionTime | String | 交易时间 (HHmmss) |
-| type | String | 交易类型（见下方说明） |
-| seqNo | String | 交易序号 |
+| transactionTime | String | 交易時間 (HHmmss) |
+| type | String | 交易類別（見下方說明） |
+| seqNo | String | 交易序號 |
 
-**交易类型 (type) 代码说明：**
+**交易類別 (type) 代碼說明：**
 
-| 代码 | 说明 |
+| 代碼 | 說明 |
 |---|---|
-| A | 临柜 |
-| B / P | 语音 |
-| C | 网银 |
-| D | 行动银行 |
-| E / R | 汇款 |
+| A | 臨櫃 |
+| B / P | 語音 |
+| C | 網銀 |
+| D | 行動銀行 |
+| E / R | 匯款 |
 | F | FXML |
 | G | eBill |
 | J | ADM |
 | M | MOD |
 | T | ATM |
 | X | eATM |
-| 0 | 其他 |
+| 0 | 其它 |
 
 ---
 
-## 6. 常见问题
+## 6. 常見問題
 
-### Q: 签名验证一直失败？
+### Q: 簽章驗證一直失敗？
 
-请检查以下几点：
-1. 确认 Secret Key 是否正确
-2. 确认待签名字符串的拼接顺序和换行符
-3. 确认时间戳是 **秒级** Unix 时间戳，不是毫秒
-4. 确认请求体是原始 JSON 字符串，没有经过额外格式化
-5. 确认服务器时钟准确
+請檢查以下幾點：
+1. 確認 Secret Key 是否正確
+2. 確認待簽章字串的串接順序和換行字元
+3. 確認時間戳記是**秒級** Unix 時間戳記，不是毫秒
+4. 確認請求主體是原始 JSON 字串，沒有經過額外格式化
+5. 確認伺服器時鐘準確
 
-### Q: Webhook 收不到回调？
+### Q: Webhook 收不到回呼？
 
-请检查：
-1. Webhook URL 是否能从公网访问
-2. 防火墙是否放行了我方服务器 IP
-3. 服务端是否正确返回了 HTTP 2xx 状态码
-4. 回调处理是否在 30 秒内完成
+請檢查：
+1. Webhook URL 是否能從公開網路存取
+2. 防火牆是否放行了我方伺服器 IP
+3. 伺服器端是否正確回傳了 HTTP 2xx 狀態碼
+4. 回呼處理是否在 30 秒內完成
 
-### Q: 密钥泄露了怎么办？
+### Q: 金鑰洩漏了怎麼辦？
 
-请立即联系我们的技术人员，我们会在后台为您重新生成密钥。旧密钥将立即失效。
+請立即聯繫我們的技術人員，我們會在後台為您重新產生金鑰。舊金鑰將立即失效。

@@ -1,14 +1,1 @@
-export const themeData = JSON.parse("{\"logo\":\"https://vuejs.press/images/hero.png\",\"navbar\":[\"/\",\"/get-started\"],\"locales\":{\"/\":{\"selectLanguageName\":\"English\"}},\"colorMode\":\"auto\",\"colorModeSwitch\":true,\"repo\":null,\"selectLanguageText\":\"Languages\",\"selectLanguageAriaLabel\":\"Select language\",\"sidebar\":\"heading\",\"sidebarDepth\":2,\"editLink\":true,\"editLinkText\":\"Edit this page\",\"lastUpdated\":true,\"contributors\":true,\"contributorsText\":\"Contributors\",\"notFound\":[\"There's nothing here.\",\"How did we get here?\",\"That's a Four-Oh-Four.\",\"Looks like we've got some broken links.\"],\"backToHome\":\"Take me home\",\"openInNewWindow\":\"open in new window\",\"toggleColorMode\":\"toggle color mode\",\"toggleSidebar\":\"toggle sidebar\"}")
-
-if (import.meta.webpackHot) {
-  import.meta.webpackHot.accept()
-  if (__VUE_HMR_RUNTIME__.updateThemeData) {
-    __VUE_HMR_RUNTIME__.updateThemeData(themeData)
-  }
-}
-
-if (import.meta.hot) {
-  import.meta.hot.accept(({ themeData }) => {
-    __VUE_HMR_RUNTIME__.updateThemeData(themeData)
-  })
-}
+export const themeData = JSON.parse("{\"locales\":{\"/\":{\"selectLanguageName\":\"简体中文\",\"selectLanguageText\":\"选择语言\",\"navbar\":[{\"text\":\"首页\",\"link\":\"/\"},{\"text\":\"Open API 对接指南\",\"link\":\"/open-api-guide\"}],\"sidebar\":[{\"text\":\"Open API 对接指南\",\"link\":\"/open-api-guide\"}],\"lastUpdatedText\":\"上次更新\",\"contributorsText\":\"贡献者\",\"tip\":\"提示\",\"warning\":\"注意\",\"danger\":\"警告\",\"notFound\":[\"页面未找到\"],\"backToHome\":\"返回首页\"},\"/zh-TW/\":{\"selectLanguageName\":\"繁體中文\",\"selectLanguageText\":\"選擇語言\",\"navbar\":[{\"text\":\"首頁\",\"link\":\"/zh-TW/\"},{\"text\":\"Open API 串接指南\",\"link\":\"/zh-TW/open-api-guide\"}],\"sidebar\":[{\"text\":\"Open API 串接指南\",\"link\":\"/zh-TW/open-api-guide\"}],\"lastUpdatedText\":\"上次更新\",\"contributorsText\":\"貢獻者\",\"tip\":\"提示\",\"warning\":\"注意\",\"danger\":\"警告\",\"notFound\":[\"頁面未找到\"],\"backToHome\":\"返回首頁\"},\"/en/\":{\"selectLanguageName\":\"English\",\"selectLanguageText\":\"Languages\",\"navbar\":[{\"text\":\"Home\",\"link\":\"/en/\"},{\"text\":\"Open API Guide\",\"link\":\"/en/open-api-guide\"}],\"sidebar\":[{\"text\":\"Open API Integration Guide\",\"link\":\"/en/open-api-guide\"}],\"lastUpdatedText\":\"Last Updated\",\"contributorsText\":\"Contributors\",\"notFound\":[\"Page not found\"],\"backToHome\":\"Back to Home\"}},\"colorMode\":\"auto\",\"colorModeSwitch\":true,\"navbar\":[],\"logo\":null,\"repo\":null,\"selectLanguageText\":\"Languages\",\"selectLanguageAriaLabel\":\"Select language\",\"sidebar\":\"heading\",\"sidebarDepth\":2,\"editLink\":true,\"editLinkText\":\"Edit this page\",\"lastUpdated\":true,\"contributors\":true,\"contributorsText\":\"Contributors\",\"notFound\":[\"There's nothing here.\",\"How did we get here?\",\"That's a Four-Oh-Four.\",\"Looks like we've got some broken links.\"],\"backToHome\":\"Take me home\",\"openInNewWindow\":\"open in new window\",\"toggleColorMode\":\"toggle color mode\",\"toggleSidebar\":\"toggle sidebar\"}")

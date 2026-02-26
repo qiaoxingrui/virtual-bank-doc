@@ -1,33 +1,20 @@
 ---
 home: true
-title: Home
-heroImage: https://vuejs.press/images/hero.png
+title: 虚拟账号平台
+heroText: 虚拟账号平台
+tagline: Open API 对接文档
 actions:
-  - text: Get Started
-    link: /get-started.html
+  - text: 查看对接指南
+    link: /open-api-guide.html
     type: primary
 
-  - text: Introduction
-    link: https://vuejs.press/guide/introduction.html
-    type: secondary
-
 features:
-  - title: Simplicity First
-    details: Minimal setup with markdown-centered project structure helps you focus on writing.
-  - title: Vue-Powered
-    details: Enjoy the dev experience of Vue, use Vue components in markdown, and develop custom themes with Vue.
-  - title: Performant
-    details: VuePress generates pre-rendered static HTML for each page, and runs as an SPA once a page is loaded.
-  - title: Themes
-    details: Providing a default theme out of the box. You can also choose a community theme or create your own one.
-  - title: Plugins
-    details: Flexible plugin API, allowing plugins to provide lots of plug-and-play features for your site.
-  - title: Bundlers
-    details: Default bundler is Vite, while Webpack is also supported. Choose the one you like!
+  - title: HMAC-SHA256 签名
+    details: 基于 HMAC-SHA256 的请求签名机制，确保每一次 API 调用的安全性与完整性。
+  - title: Webhook 实时通知
+    details: 入金完成后自动推送 Webhook 通知，支持签名验证与指数退避重试策略。
+  - title: 多语言代码示例
+    details: 提供 Java、Python、Node.js、PHP 等多种语言的签名与验签代码示例。
 
-footer: MIT Licensed | Copyright © 2018-present VuePress Community
+footer: Copyright © 2025 Virtual Account Platform
 ---
-
-This is the content of home page. Check [Home Page Docs][default-theme-home] for more details.
-
-[default-theme-home]: https://vuejs.press/reference/default-theme/frontmatter.html#home-page
