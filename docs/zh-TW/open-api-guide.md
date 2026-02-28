@@ -437,35 +437,33 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 
 ## 5. 事件類型
 
-### 5.1 deposit.completed - 入金完成
+### 5.1 order.completed - 訂單完成
 
-當虛擬帳號收到入金後觸發。
+當訂單收到支付後觸發。
 
-**Payload 範例：**
+**Payload 示例：**
 
 ```json
 {
-    "accountNo": "1234567890123456",
-    "amount": "50000",
+    "orderNo": "1234567890123456",
+    "receiptAmount": "50000",
     "currency": "TWD",
-    "transactionDate": "20250225",
-    "transactionTime": "143052",
+    "gmtPayment": "20260225143052",
     "type": "C",
-    "seqNo": "20250225001"
+    "tradeStatus": "WAIT_BUYER_PAY"
 }
 ```
 
-| 欄位 | 類型 | 說明 |
+| 字段 | 類型 | 說明 |
 |---|---|---|
-| accountNo | String | 虛擬帳號 |
-| amount | String | 入金金額 |
-| currency | String | 幣別（預設 `TWD`，可能值：`TWD` / `USD`） |
-| transactionDate | String | 交易日期 (yyyyMMdd) |
-| transactionTime | String | 交易時間 (HHmmss) |
-| type | String | 交易類別（見下方說明） |
-| seqNo | String | 交易序號 |
+| orderNo | String | 訂單號 |
+| receiptAmount | String | 實收金額 |
+| currency | String | 幣別（默認 `TWD`，可能值：`TWD` / `USD`） |
+| gmtPayment | String | 支付時間  |
+| type | String | 交易類型（見下方說明） |
+| tradeStatus | String | 交易狀態 |
 
-**交易類別 (type) 代碼說明：**
+**交易類型 (type) 代碼說明：**
 
 | 代碼 | 說明 |
 |---|---|
@@ -480,11 +478,215 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 | M | MOD |
 | T | ATM |
 | X | eATM |
-| 0 | 其它 |
+| 0 | 其他 |
+
+**交易狀態 (tradeStatus) 代碼說明：**
+
+| 代碼 | 說明 |
+|---|---|
+| WAIT_BUYER_PAY | 待支付 |
+| TRADE_SUCCESS | 成功 |
+| TRADE_CLOSED | 關閉 |
+| TRADE_FINISHED | 完結 |
+| TRADE_TIMEOUT | 超時 |
+| TRADE_CLEAR | 取消 |
+
+### 5.2 order.clear - 訂單取消
+
+當訂單取消後觸發。
+
+**Payload 示例：**
+
+```json
+{
+    "orderNo": "1234567890123456",
+    "tradeStatus": "WAIT_BUYER_PAY",
+    "timeoutType": "USER_TIMEOUT"
+}
+```
+
+| 字段 | 類型 | 說明 |
+|---|---|---|
+| orderNo | String | 訂單號 |
+| tradeStatus | String | 交易狀態 |
+| timeoutType | String | 超時類型 |
+
+**交易狀態 (tradeStatus) 代碼說明：**
+
+| 代碼 | 說明 |
+|---|---|
+| WAIT_BUYER_PAY | 待支付 |
+| TRADE_SUCCESS | 成功 |
+| TRADE_CLOSED | 關閉 |
+| TRADE_FINISHED | 完結 |
+| TRADE_TIMEOUT | 超時 |
+| TRADE_CLEAR | 取消 |
+
+**超時類型 (timeoutType) 代碼說明：**
+
+| 代碼 | 說明 |
+|---|---|
+| SYSTEM_CLOSE | 系統關閉 |
+| USER_TIMEOUT | 用戶超時 |
 
 ---
 
-## 6. 常見問題
+
+## 6. 支付訂單
+
+### 6.1. 創建支付訂單
+
+- **接口地址**：`POST /open-api/payment-order/create`
+- **接口描述**：用於商戶創建新的支付訂單
+- **認證方式**：OpenAPI 認證
+
+#### 請求參數
+
+| 參數名 | 類型 | 必填 | 示例值 | 描述 |
+|--------|------|------|--------|------|
+| subject | String | 是 | 購買商品A | 標題 |
+| transactionType | Integer | 是 | 1 | 訂單交易類型(1:功德款,2:虛擬通貨（線下）,3:虛擬通貨P2P,4:算力平臺 B2B 收款,5:遊戲充值收費,6:零售收款) |
+| currency | String | 是 | TWD | 幣別(TWD, USD) |
+| totalAmount | BigDecimal | 是 | 100.00 | 訂單總金額 |
+| gmtCreate | LocalDateTime | 是 | 2023-01-01T10:00:00 | 交易創建時間 |
+| timeExpire | LocalDateTime | 是 | 2023-01-02T10:00:00 | 訂單超時時間 |
+| passbackParams | String | 否 | param=value | 公共回傳參數 |
+| merchantParams | String | 否 | custom=data | 商戶傳入參數 |
+
+#### 請求示例
+
+```json
+{
+  "subject": "購買商品A",
+  "transactionType": 1,
+  "currency": "TWD",
+  "totalAmount": 100.00,
+  "gmtCreate": "2023-01-01T10:00:00",
+  "timeExpire": "2023-01-02T10:00:00",
+  "passbackParams": "param=value",
+  "merchantParams": "custom=data"
+}
+```
+
+#### 響應參數
+
+| 參數名 | 類型 | 示例值 | 描述 |
+|--------|------|--------|------|
+| id | Long | 21380 | 主鍵 |
+| orderNo | String | ORDER20230101001 | 訂單號 |
+| subject | String | 購買商品A | 標題 |
+| transactionType | Integer | 1 | 訂單交易類型 |
+| currency | String | TWD | 幣別 |
+| totalAmount | BigDecimal | 100.00 | 訂單總金額 |
+| receiptAmount | BigDecimal | 100.00 | 實收金額 |
+| tradeStatus | String | WAIT_BUYER_PAY | 交易狀態：WAIT_BUYER_PAY（待支付）、TRADE_SUCCESS（成功）、TRADE_CLOSED（關閉）、TRADE_FINISHED（完結）、TRADE_TIMEOUT（超時） |
+| gmtCreate | LocalDateTime | 2023-01-01T10:00:00 | 交易創建時間 |
+| gmtPayment | LocalDateTime | null | 支付時間 |
+| timeExpire | LocalDateTime | 2023-01-02T10:00:00 | 訂單超時時間 |
+| timeoutType | String | null | 超時類型：SYSTEM_CLOSE（系統關閉）、USER_TIMEOUT（用戶超時未付） |
+| passbackParams | String | param=value | 公共回傳參數 |
+| merchantParams | String | custom=data | 商戶傳入參數 |
+| createTime | LocalDateTime | 2023-01-01T10:00:00 | 創建時間 |
+
+#### 響應示例
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": 21380,
+    "orderNo": "ORDER20230101001",
+    "subject": "購買商品A",
+    "transactionType": 1,
+    "currency": "TWD",
+    "totalAmount": 100.00,
+    "receiptAmount": 100.00,
+    "tradeStatus": "WAIT_BUYER_PAY",
+    "gmtCreate": "2023-01-01T10:00:00",
+    "gmtPayment": null,
+    "timeExpire": "2023-01-02T10:00:00",
+    "timeoutType": null,
+    "passbackParams": "passbackParams",
+    "merchantParams": "merchantParams",
+    "createTime": "2023-01-01T10:00:00"
+  }
+}
+```
+
+### 2. 查詢支付訂單
+
+- **接口地址**：`GET /open-api/payment-order/get`
+- **接口描述**：根據訂單號查詢支付訂單詳情
+- **認證方式**：OpenAPI 認證
+
+#### 請求參數
+
+| 參數名 | 類型 | 必填 | 示例值 | 描述 |
+|--------|------|------|--------|------|
+| orderNo | String | 是 | ORDER20230101001 | 訂單號 |
+
+#### 響應參數
+
+同"創建支付訂單"接口的響應參數。
+
+#### 響應示例
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": 21380,
+    "orderNo": "ORDER20230101001",
+    "subject": "購買商品A",
+    "transactionType": 1,
+    "currency": "TWD",
+    "totalAmount": 100.00,
+    "receiptAmount": 100.00,
+    "tradeStatus": "TRADE_SUCCESS",
+    "gmtCreate": "2023-01-01T10:00:00",
+    "gmtPayment": "2023-01-01T10:30:00",
+    "timeExpire": "2023-01-02T10:00:00",
+    "timeoutType": null,
+    "passbackParams": "param=value",
+    "merchantParams": "custom=data",
+    "createTime": "2023-01-01T10:00:00"
+  }
+}
+```
+
+### 6.3. 取消支付訂單
+
+- **接口地址**：`POST /open-api/payment-order/clear`
+- **接口描述**：取消指定訂單號的支付訂單
+- **認證方式**：OpenAPI 認證
+
+#### 請求參數
+
+| 參數名 | 類型 | 必填 | 示例值 | 描述 |
+|--------|------|------|--------|------|
+| orderNo | String | 是 | ORDER20230101001 | 訂單號 |
+
+#### 響應參數
+
+| 參數名 | 類型 | 示例值 | 描述 |
+|--------|------|--------|------|
+| code | Integer | 0 | 狀態碼 |
+| message | String | success | 消息 |
+| data | Boolean | true | 是否成功 |
+
+#### 響應示例
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": true
+}
+
+```
+
+---
+
+## 7. 常見問題
 
 ### Q: 簽章驗證一直失敗？
 

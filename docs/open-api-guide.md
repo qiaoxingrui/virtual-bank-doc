@@ -262,7 +262,7 @@ echo $response;
 | Header | 说明 |
 |---|---|
 | `X-Webhook-Signature` | 签名信息，格式：`t={timestamp},v1={signature}` |
-| `X-Webhook-Event` | 事件类型，如 `deposit.completed` |
+| `X-Webhook-Event` | 事件类型，如 `order.completed` |
 | `Content-Type` | `application/json` |
 
 ### 4.2 签名验证
@@ -437,33 +437,31 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 
 ## 5. 事件类型
 
-### 5.1 deposit.completed - 入金完成
+### 5.1 order.completed - 订单完成
 
-当虚拟账号收到入金后触发。
+当订单收到支付后触发。
 
 **Payload 示例：**
 
 ```json
 {
-    "accountNo": "1234567890123456",
-    "amount": "50000",
+    "orderNo": "1234567890123456",
+    "receiptAmount": "50000",
     "currency": "TWD",
-    "transactionDate": "20250225",
-    "transactionTime": "143052",
+    "gmtPayment": "20260225143052",
     "type": "C",
-    "seqNo": "20250225001"
+    "tradeStatus": "WAIT_BUYER_PAY"
 }
 ```
 
 | 字段 | 类型 | 说明 |
 |---|---|---|
-| accountNo | String | 虚拟账号 |
-| amount | String | 入金金额 |
+| orderNo | String | 订单号 |
+| receiptAmount | String | 实收金额 |
 | currency | String | 币别（默认 `TWD`，可能值：`TWD` / `USD`） |
-| transactionDate | String | 交易日期 (yyyyMMdd) |
-| transactionTime | String | 交易时间 (HHmmss) |
+| gmtPayment | String | 支付时间  |
 | type | String | 交易类型（见下方说明） |
-| seqNo | String | 交易序号 |
+| tradeStatus | String | 交易状态 |
 
 **交易类型 (type) 代码说明：**
 
@@ -482,9 +480,217 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 | X | eATM |
 | 0 | 其他 |
 
+**交易状态 (tradeStatus) 代码说明：**
+
+| 代码 | 说明 |
+|---|---|
+| WAIT_BUYER_PAY | 待支付 |
+| TRADE_SUCCESS | 成功 |
+| TRADE_CLOSED | 关闭 |
+| TRADE_FINISHED | 完结 |
+| TRADE_TIMEOUT | 超时 |
+| TRADE_CLEAR | 取消 |
+
+### 5.2 order.clear - 订单取消
+
+当订单取消后触发。
+
+**Payload 示例：**
+
+```json
+{
+    "orderNo": "1234567890123456",
+    "tradeStatus": "WAIT_BUYER_PAY",
+    "timeoutType": "USER_TIMEOUT"
+}
+```
+
+| 字段 | 类型 | 说明 |
+|---|---|---|
+| orderNo | String | 订单号 |
+| tradeStatus | String | 交易状态 |
+| timeoutType | String | 超时类型 |
+
+**交易状态 (tradeStatus) 代码说明：**
+
+| 代码 | 说明 |
+|---|---|
+| WAIT_BUYER_PAY | 待支付 |
+| TRADE_SUCCESS | 成功 |
+| TRADE_CLOSED | 关闭 |
+| TRADE_FINISHED | 完结 |
+| TRADE_TIMEOUT | 超时 |
+| TRADE_CLEAR | 取消 |
+
+**超时类型 (timeoutType) 代码说明：**
+
+| 代码 | 说明 |
+|---|---|
+| SYSTEM_CLOSE | 系统关闭 |
+| USER_TIMEOUT | 用户超时 |
+
 ---
 
-## 6. 常见问题
+
+## 6. 支付订单
+
+### 6.1. 创建支付订单
+
+- **接口地址**：`POST /open-api/payment-order/create`
+- **接口描述**：用于商户创建新的支付订单
+- **认证方式**：OpenAPI 认证
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 示例值 | 描述 |
+|--------|------|------|--------|------|
+| subject | String | 是 | 购买商品A | 标题 |
+| transactionType | Integer | 是 | 1 | 订单交易类型(1:功德款,2:虛擬通貨（線下）,3:虛擬通貨P2P,4:算力平臺 B2B 收款,5:游戏充值收费,6:零售收款) |
+| currency | String | 是 | TWD | 币别(TWD, USD) |
+| totalAmount | BigDecimal | 是 | 100.00 | 订单总金额 |
+| gmtCreate | LocalDateTime | 是 | 2023-01-01T10:00:00 | 交易创建时间 |
+| timeExpire | LocalDateTime | 是 | 2023-01-02T10:00:00 | 订单超时时间 |
+| passbackParams | String | 否 | param=value | 公共回传参数 |
+| merchantParams | String | 否 | custom=data | 商户传入参数 |
+
+#### 请求示例
+
+```json
+{
+  "subject": "购买商品A",
+  "transactionType": 1,
+  "currency": "TWD",
+  "totalAmount": 100.00,
+  "gmtCreate": "2023-01-01T10:00:00",
+  "timeExpire": "2023-01-02T10:00:00",
+  "passbackParams": "param=value",
+  "merchantParams": "custom=data"
+}
+```
+
+#### 响应参数
+
+| 参数名 | 类型 | 示例值 | 描述 |
+|--------|------|--------|------|
+| id | Long | 21380 | 主键 |
+| orderNo | String | ORDER20230101001 | 订单号 |
+| subject | String | 购买商品A | 标题 |
+| transactionType | Integer | 1 | 订单交易类型 |
+| currency | String | TWD | 币别 |
+| totalAmount | BigDecimal | 100.00 | 订单总金额 |
+| receiptAmount | BigDecimal | 100.00 | 实收金额 |
+| tradeStatus | String | WAIT_BUYER_PAY | 交易状态：WAIT_BUYER_PAY（待支付）、TRADE_SUCCESS（成功）、TRADE_CLOSED（关闭）、TRADE_FINISHED（完结）、TRADE_TIMEOUT（超时） |
+| gmtCreate | LocalDateTime | 2023-01-01T10:00:00 | 交易创建时间 |
+| gmtPayment | LocalDateTime | null | 支付时间 |
+| timeExpire | LocalDateTime | 2023-01-02T10:00:00 | 订单超时时间 |
+| timeoutType | String | null | 超时类型：SYSTEM_CLOSE（系统关闭）、USER_TIMEOUT（用户超时未付） |
+| merchantId | Long | 20116 | 商户id |
+| passbackParams | String | param=value | 公共回传参数 |
+| merchantParams | String | custom=data | 商户传入参数 |
+| createTime | LocalDateTime | 2023-01-01T10:00:00 | 创建时间 |
+
+#### 响应示例
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": 21380,
+    "orderNo": "ORDER20230101001",
+    "subject": "购买商品A",
+    "transactionType": 1,
+    "currency": "TWD",
+    "totalAmount": 100.00,
+    "receiptAmount": 100.00,
+    "tradeStatus": "WAIT_BUYER_PAY",
+    "gmtCreate": "2023-01-01T10:00:00",
+    "gmtPayment": null,
+    "timeExpire": "2023-01-02T10:00:00",
+    "timeoutType": null,
+    "merchantId": 20116,
+    "passbackParams": "passbackParams",
+    "merchantParams": "merchantParams",
+    "createTime": "2023-01-01T10:00:00"
+  }
+}
+```
+
+### 2. 查询支付订单
+
+- **接口地址**：`GET /open-api/payment-order/get`
+- **接口描述**：根据订单号查询支付订单详情
+- **认证方式**：OpenAPI 认证
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 示例值 | 描述 |
+|--------|------|------|--------|------|
+| orderNo | String | 是 | ORDER20230101001 | 订单号 |
+
+#### 响应参数
+
+同"创建支付订单"接口的响应参数。
+
+#### 响应示例
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": 21380,
+    "orderNo": "ORDER20230101001",
+    "subject": "购买商品A",
+    "transactionType": 1,
+    "currency": "TWD",
+    "totalAmount": 100.00,
+    "receiptAmount": 100.00,
+    "tradeStatus": "TRADE_SUCCESS",
+    "gmtCreate": "2023-01-01T10:00:00",
+    "gmtPayment": "2023-01-01T10:30:00",
+    "timeExpire": "2023-01-02T10:00:00",
+    "timeoutType": null,
+    "merchantId": 20116,
+    "passbackParams": "param=value",
+    "merchantParams": "custom=data",
+    "createTime": "2023-01-01T10:00:00"
+  }
+}
+```
+
+### 6.3. 取消支付订单
+
+- **接口地址**：`POST /open-api/payment-order/clear`
+- **接口描述**：取消指定订单号的支付订单
+- **认证方式**：OpenAPI 认证
+
+#### 请求参数
+
+| 参数名 | 类型 | 必填 | 示例值 | 描述 |
+|--------|------|------|--------|------|
+| orderNo | String | 是 | ORDER20230101001 | 订单号 |
+
+#### 响应参数
+
+| 参数名 | 类型 | 示例值 | 描述 |
+|--------|------|--------|------|
+| code | Integer | 0 | 状态码 |
+| message | String | success | 消息 |
+| data | Boolean | true | 是否成功 |
+
+#### 响应示例
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": true
+}
+
+```
+
+---
+
+
+## 7. 常见问题
 
 ### Q: 签名验证一直失败？
 

@@ -435,56 +435,260 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 
 ---
 
-## 5. Event Types
+## 5.  Event Types
 
-### 5.1 deposit.completed - Deposit Completed
+### 5.1 order.completed - Order Completed
 
-Triggered when a virtual account receives a deposit.
+Triggered after an order receives payment.
 
-**Payload Example:**
+**Payload Example：**
 
 ```json
 {
-    "accountNo": "1234567890123456",
-    "amount": "50000",
+    "orderNo": "1234567890123456",
+    "receiptAmount": "50000",
     "currency": "TWD",
-    "transactionDate": "20250225",
-    "transactionTime": "143052",
+    "gmtPayment": "20260225143052",
     "type": "C",
-    "seqNo": "20250225001"
+    "tradeStatus": "WAIT_BUYER_PAY"
 }
 ```
 
 | Field | Type | Description |
 |---|---|---|
-| accountNo | String | Virtual account number |
-| amount | String | Deposit amount |
-| currency | String | Currency (default `TWD`, possible values: `TWD` / `USD`) |
-| transactionDate | String | Transaction date (yyyyMMdd) |
-| transactionTime | String | Transaction time (HHmmss) |
-| type | String | Transaction type (see table below) |
-| seqNo | String | Transaction sequence number |
+| orderNo | String | Order Number |
+| receiptAmount | String | Actual Received Amount |
+| currency | String | Currency (Default: TWD; Possible Values: TWD / USD) |
+| gmtPayment | String | Payment Time |
+| type | String | Transaction Type (See description below) |
+| tradeStatus | String | Transaction Status |
 
-**Transaction Type (type) Codes:**
+**Transaction Type (type) Code Description：**
 
 | Code | Description |
 |---|---|
-| A | Over-the-counter |
-| B / P | Voice banking |
-| C | Internet banking |
-| D | Mobile banking |
-| E / R | Wire transfer |
+| A | Counter |
+| B / P | Voice |
+| C | Online Banking |
+| D | Mobile Banking |
+| E / R | Remittance |
 | F | FXML |
 | G | eBill |
 | J | ADM |
 | M | MOD |
 | T | ATM |
 | X | eATM |
-| 0 | Other |
+| 0 | 其他 |
+
+**Transaction Status (tradeStatus) Code Description：**
+
+| Code | Description |
+|---|---|
+| WAIT_BUYER_PAY | Pending Payment |
+| TRADE_SUCCESS | Success |
+| TRADE_CLOSED | Closed |
+| TRADE_FINISHED | Finished |
+| TRADE_TIMEOUT | Timeout |
+| TRADE_CLEAR | Cleared |
+
+### 5.2 order.clear - Order Cancelled
+
+Triggered after an order is cancelled.
+
+**Payload Example：**
+
+```json
+{
+    "orderNo": "1234567890123456",
+    "tradeStatus": "WAIT_BUYER_PAY",
+    "timeoutType": "USER_TIMEOUT"
+}
+```
+
+| Field | Type | Description |
+|---|---|---|
+| orderNo | String | Order Number |
+| tradeStatus | String | Transaction Status |
+| timeoutType | String | Timeout Type |
+
+**Transaction Status (tradeStatus) Code Description：**
+
+| Code | Description |
+|---|---|
+| WAIT_BUYER_PAY | Pending Payment |
+| TRADE_SUCCESS | Success |
+| TRADE_CLOSED | Closed |
+| TRADE_FINISHED | Finished |
+| TRADE_TIMEOUT | Timeout |
+| TRADE_CLEAR | Cleared |
+
+**Timeout Type (timeoutType) Code Description：**
+
+| Code | Description |
+|---|---|
+| SYSTEM_CLOSE | System Close |
+| USER_TIMEOUT | User Timeout |
 
 ---
 
-## 6. FAQ
+
+## 6. Payment Orders
+
+### 6.1. Create Payment Order
+
+- **API Endpoint**：`POST /open-api/payment-order/create`
+- **API Description**：Used by merchants to create new payment orders
+- **Authentication Method**：OpenAPI Authentication
+
+#### Request Parameters
+
+| Parameter Name | Type | Required | Example Value | Description |
+|--------|------|------|--------|------|
+| subject | String | Yes | A | Title |
+| transactionType | Integer | Yes | 1 | Order Transaction Type (1:Merit Goods, 2:Virtual Currency (Offline), 3:Virtual Currency P2P, 4:Mining Platform B2B Receipt, 5:Game Recharge Charge, 6:Retail Receipt) |
+| currency | String | Yes | TWD | Currency (TWD, USD) |
+| totalAmount | BigDecimal | Yes | 100.00 | Order Total Amount |
+| gmtCreate | LocalDateTime | Yes | 2023-01-01T10:00:00 | Transaction Creation Time |
+| timeExpire | LocalDateTime | Yes | 2023-01-02T10:00:00 | Order Timeout Time |
+| passbackParams | String | No | param=value | Public Backward Parameters |
+| merchantParams | String | No | custom=data | Merchant Parameters |
+
+#### Request Example
+
+```json
+{
+  "subject": "A",
+  "transactionType": 1,
+  "currency": "TWD",
+  "totalAmount": 100.00,
+  "gmtCreate": "2023-01-01T10:00:00",
+  "timeExpire": "2023-01-02T10:00:00",
+  "passbackParams": "param=value",
+  "merchantParams": "custom=data"
+}
+```
+
+#### Response Parameters
+
+| Parameter Name | Type | Example Value | Description |
+|--------|------|--------|------|
+| id | Long | 21380 | Primary Key |
+| orderNo | String | ORDER20230101001 | Order Number |
+| subject | String | A | Title |
+| transactionType | Integer | 1 | Order Transaction Type |
+| currency | String | TWD | Currency |
+| totalAmount | BigDecimal | 100.00 | Order Total Amount |
+| receiptAmount | BigDecimal | 100.00 | Received Amount |
+| tradeStatus | String | WAIT_BUYER_PAY | Transaction Status |
+| gmtCreate | LocalDateTime | 2023-01-01T10:00:00 | Transaction Creation Time |
+| gmtPayment | LocalDateTime | null | Payment Time |
+| timeExpire | LocalDateTime | 2023-01-02T10:00:00 | Order Timeout Time |
+| timeoutType | String | null | Timeout Type: SYSTEM_CLOSE（System Close）、USER_TIMEOUT（User Timeout） |
+| merchantId | Long | 20116 | Merchant ID |
+| passbackParams | String | param=value | Public Backward Parameters |
+| merchantParams | String | custom=data | Merchant Parameters |
+| createTime | LocalDateTime | 2023-01-01T10:00:00 | Creation Time |
+
+#### Response Example
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": 21380,
+    "orderNo": "ORDER20230101001",
+    "subject": "购买商品A",
+    "transactionType": 1,
+    "currency": "TWD",
+    "totalAmount": 100.00,
+    "receiptAmount": 100.00,
+    "tradeStatus": "WAIT_BUYER_PAY",
+    "gmtCreate": "2023-01-01T10:00:00",
+    "gmtPayment": null,
+    "timeExpire": "2023-01-02T10:00:00",
+    "timeoutType": null,
+    "merchantId": 20116,
+    "passbackParams": "passbackParams",
+    "merchantParams": "merchantParams",
+    "createTime": "2023-01-01T10:00:00"
+  }
+}
+```
+
+### 6.2. Query Payment Order
+
+- **API Endpoint**：`GET /open-api/payment-order/get`
+- **API Description**：Query payment order details by order number
+- **Authentication Method**：OpenAPI Authentication
+
+#### Request Parameters
+
+| Parameter Name | Type | Required | Example Value | Description |
+|--------|------|------|--------|------|
+| orderNo | String | Yes | ORDER20230101001 | Order Number |
+
+#### Response Parameters
+
+Same as "Create Payment Order" interface response parameters.
+
+#### Response Example
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": {
+    "id": 21380,
+    "orderNo": "ORDER20230101001",
+    "subject": "购买商品A",
+    "transactionType": 1,
+    "currency": "TWD",
+    "totalAmount": 100.00,
+    "receiptAmount": 100.00,
+    "tradeStatus": "TRADE_SUCCESS",
+    "gmtCreate": "2023-01-01T10:00:00",
+    "gmtPayment": "2023-01-01T10:30:00",
+    "timeExpire": "2023-01-02T10:00:00",
+    "timeoutType": null,
+    "merchantId": 20116,
+    "passbackParams": "param=value",
+    "merchantParams": "custom=data",
+    "createTime": "2023-01-01T10:00:00"
+  }
+}
+```
+
+### 6.3. Cancel Payment Order
+
+- **API Endpoint**：`POST /open-api/payment-order/clear`
+- **API Description**：Cancel payment order by order number
+- **Authentication Method**：OpenAPI Authentication
+
+#### Request Parameters
+
+| Parameter Name | Type | Required | Example Value | Description |
+|--------|------|------|--------|------|
+| orderNo | String | Yes | ORDER20230101001 | Order Number |
+
+#### Response Parameters
+
+| Parameter Name | Type | Example Value | Description |
+|--------|------|--------|------|
+| code | Integer | 0 | Status Code |
+| message | String | success | Message |
+| data | Boolean | true | Whether Successful |
+
+#### Response Example
+```json
+{
+  "code": 0,
+  "message": "success",
+  "data": true
+}
+```
+
+---
+
+## 7. FAQ
 
 ### Q: Signature verification keeps failing?
 
