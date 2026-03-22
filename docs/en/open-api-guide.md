@@ -13,16 +13,17 @@ This document describes how to integrate with our Virtual Account Platform via O
 | Data Format | JSON |
 | Encoding | UTF-8 |
 
-### 1.2 Key Descriptions
+### 1.2 Merchant Number and Keys
 
-After onboarding, you will receive two sets of keys:
+After onboarding, you will receive a **Merchant Number** and two keys:
 
-| Key | Purpose |
+| Item | Purpose |
 |---|---|
-| **Secret Key** | Used for API request signing to verify the legitimacy of the request origin |
+| **Merchant Number** | Sent in API request headers to identify your account (not a secret; safe to include in requests) |
+| **Secret Key** | Used only on your server to compute `X-Api-Signature`; **do not** put it in headers or send it in plain text over the network |
 | **Webhook Key** | Used to verify the authenticity of our callback requests and prevent forgery |
 
-> ⚠️ Keep your keys secure. Never expose them in client-side code, logs, or version control. If a key is compromised, contact us immediately to regenerate it.
+> ⚠️ Keep your Secret Key and Webhook Key secure. Never expose them in client-side code, logs, or version control. Open API headers carry only the merchant number; the server looks up your merchant and verifies the signature using the stored Secret Key, so the Secret Key is not transmitted on each request. If a key is compromised, contact us immediately to regenerate it.
 
 ---
 
@@ -32,12 +33,14 @@ All Open API requests must include signature information for authentication.
 
 ### 2.1 Request Headers
 
-| Header | Required | Description |
-|---|---|---|
-| `X-Api-Key` | Yes | Your Secret Key |
-| `X-Api-Timestamp` | Yes | Current Unix timestamp (seconds) |
-| `X-Api-Signature` | Yes | HMAC-SHA256 signature (hex-encoded) |
-| `Content-Type` | Yes | `application/json` |
+| Header | Required | Description                                                                |
+|---|---|----------------------------------------------------------------------------|
+| `X-Api-MerchantNo` | Yes | Your merchant number                                                       |
+| `X-Api-Timestamp` | Yes | Current Unix timestamp (seconds)                                           |
+| `X-Api-Signature` | Yes | HMAC-SHA256 signature (hex-encoded), computed locally with your Secret Key |
+| `Content-Type` | Yes | `application/json`                                                         |
+
+The server resolves `X-Api-MerchantNo` to your merchant record and uses the stored Secret Key to verify the signature. You compute the signature with your Secret Key locally; **do not** send the Secret Key in a header.
 
 ### 2.2 Signature Algorithm
 
@@ -62,7 +65,7 @@ StringToSign = HTTP_METHOD + "\n" + REQUEST_PATH + "\n" + TIMESTAMP + "\n" + REQ
 Signature = Hex( HMAC-SHA256( SecretKey, StringToSign ) )
 ```
 
-Use your Secret Key as the HMAC key to perform HMAC-SHA256 on the string to sign, then convert the result to a lowercase hexadecimal string.
+On your server, use your Secret Key as the HMAC key to perform HMAC-SHA256 on the string to sign, then convert the result to a lowercase hexadecimal string and set it in `X-Api-Signature`. The Secret Key is only used for local signing and is not sent with the request.
 
 ### 2.3 Timestamp Validation
 
@@ -75,7 +78,7 @@ Use your Secret Key as the HMAC key to perform HMAC-SHA256 on the string to sign
 POST /admin-api/bank/open/virtual-account/create HTTP/1.1
 Host: api.example.com
 Content-Type: application/json
-X-Api-Key: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+X-Api-MerchantNo: 123456
 X-Api-Timestamp: 1708862400
 X-Api-Signature: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
 
@@ -130,6 +133,7 @@ def sign_request(secret_key: str, method: str, path: str,
     return signature
 
 # Usage example
+merchant_no = "123456"
 secret_key = "your_secret_key_here"
 method = "POST"
 path = "/admin-api/bank/open/virtual-account/create"
@@ -142,7 +146,7 @@ response = requests.post(
     f"https://api.example.com{path}",
     headers={
         "Content-Type": "application/json",
-        "X-Api-Key": secret_key,
+        "X-Api-MerchantNo": merchant_no,
         "X-Api-Timestamp": timestamp,
         "X-Api-Signature": signature,
     },
@@ -166,6 +170,7 @@ function signRequest(secretKey, method, path, timestamp, body = '') {
 }
 
 // Usage example
+const merchantNo = '123456';
 const secretKey = 'your_secret_key_here';
 const method = 'POST';
 const path = '/admin-api/bank/open/virtual-account/create';
@@ -177,7 +182,7 @@ const signature = signRequest(secretKey, method, path, timestamp, body);
 axios.post(`https://api.example.com${path}`, body, {
     headers: {
         'Content-Type': 'application/json',
-        'X-Api-Key': secretKey,
+        'X-Api-MerchantNo': merchantNo,
         'X-Api-Timestamp': timestamp,
         'X-Api-Signature': signature,
     }
@@ -195,6 +200,7 @@ function signRequest(string $secretKey, string $method, string $path,
 }
 
 // Usage example
+$merchantNo = '123456';
 $secretKey = 'your_secret_key_here';
 $method = 'POST';
 $path = '/admin-api/bank/open/virtual-account/create';
@@ -210,7 +216,7 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => [
         'Content-Type: application/json',
-        "X-Api-Key: {$secretKey}",
+        "X-Api-MerchantNo: {$merchantNo}",
         "X-Api-Timestamp: {$timestamp}",
         "X-Api-Signature: {$signature}",
     ],
@@ -245,7 +251,7 @@ All API endpoints return a unified JSON format:
 | Error Code | Description |
 |---|---|
 | 0 | Success |
-| 1009001003 | Invalid API Key |
+| 1009001003 | Invalid merchant number or merchant not found |
 | 1009001004 | Signature verification failed |
 | 1009001005 | Request timestamp expired |
 | 1009001006 | Missing required authentication headers |
@@ -693,7 +699,7 @@ Same as "Create Payment Order" interface response parameters.
 ### Q: Signature verification keeps failing?
 
 Please check the following:
-1. Verify that your Secret Key is correct
+1. Verify that `X-Api-MerchantNo` is correct and that your Secret Key matches the one in the admin console and is only used for local signing
 2. Verify the concatenation order and newline characters in the string to sign
 3. Verify the timestamp is a **second-level** Unix timestamp, not milliseconds
 4. Verify the request body is the raw JSON string without additional formatting

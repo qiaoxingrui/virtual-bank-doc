@@ -13,16 +13,17 @@
 | 数据格式 | JSON |
 | 字符编码 | UTF-8 |
 
-### 1.2 密钥说明
+### 1.2 密钥与商户号说明
 
-开通合作后，您将获得两组密钥：
+开通合作后，您将获得 **商户号（Merchant No）** 以及两组密钥：
 
-| 密钥 | 用途 |
+| 项目 | 用途 |
 |---|---|
-| **Secret Key** | 用于 API 请求签名，证明请求来源的合法性 |
+| **商户号** | 在 API 请求头中标识您的身份（非密钥，可随请求传递） |
+| **Secret Key** | 仅在您服务端本地用于计算 `X-Api-Signature`，**不要**放入请求头或通过网络明文传输 |
 | **Webhook Key** | 用于验证我方回调请求的真实性，防止伪造 |
 
-> ⚠️ 请妥善保管密钥，切勿在客户端代码、日志或版本控制中暴露。如果密钥泄露，请立即联系我们重新生成。
+> ⚠️ 请妥善保管 Secret Key 与 Webhook Key，切勿在客户端代码、日志或版本控制中暴露。Open API 请求头中只传商户号，服务端根据商户号查询并校验签名，避免 Secret Key 在网络上传输。如果密钥泄露，请立即联系我们重新生成。
 
 ---
 
@@ -34,10 +35,12 @@
 
 | Header | 必填 | 说明 |
 |---|---|---|
-| `X-Api-Key` | 是 | 您的 Secret Key |
+| `X-Api-MerchantNo` | 是 | 您的商户号 |
 | `X-Api-Timestamp` | 是 | 当前 Unix 时间戳（秒） |
-| `X-Api-Signature` | 是 | HMAC-SHA256 签名（Hex 编码） |
+| `X-Api-Signature` | 是 | HMAC-SHA256 签名（Hex 编码），使用 Secret Key 在本地计算 |
 | `Content-Type` | 是 | `application/json` |
+
+服务端根据 `X-Api-MerchantNo` 查询商户，使用服务端保存的 Secret Key 与请求中的签名比对；您在本地用 Secret Key 计算签名，**请勿**将 Secret Key 放入请求头。
 
 ### 2.2 签名算法
 
@@ -62,7 +65,7 @@ StringToSign = HTTP_METHOD + "\n" + REQUEST_PATH + "\n" + TIMESTAMP + "\n" + REQ
 Signature = Hex( HMAC-SHA256( SecretKey, StringToSign ) )
 ```
 
-使用您的 Secret Key 作为 HMAC 密钥，对待签名字符串进行 HMAC-SHA256 运算，然后将结果转为十六进制小写字符串。
+在您的服务端使用 Secret Key 作为 HMAC 密钥，对待签名字符串进行 HMAC-SHA256 运算，然后将结果转为十六进制小写字符串，将结果放入 `X-Api-Signature`。Secret Key 仅用于本地计算，不随请求发送。
 
 ### 2.3 时间戳验证
 
@@ -75,7 +78,7 @@ Signature = Hex( HMAC-SHA256( SecretKey, StringToSign ) )
 POST /admin-api/bank/open/virtual-account/create HTTP/1.1
 Host: api.example.com
 Content-Type: application/json
-X-Api-Key: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+X-Api-MerchantNo: 123456
 X-Api-Timestamp: 1708862400
 X-Api-Signature: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
 
@@ -130,6 +133,7 @@ def sign_request(secret_key: str, method: str, path: str,
     return signature
 
 # 使用示例
+merchant_no = "123456"
 secret_key = "your_secret_key_here"
 method = "POST"
 path = "/admin-api/bank/open/virtual-account/create"
@@ -142,7 +146,7 @@ response = requests.post(
     f"https://api.example.com{path}",
     headers={
         "Content-Type": "application/json",
-        "X-Api-Key": secret_key,
+        "X-Api-MerchantNo": merchant_no,
         "X-Api-Timestamp": timestamp,
         "X-Api-Signature": signature,
     },
@@ -166,6 +170,7 @@ function signRequest(secretKey, method, path, timestamp, body = '') {
 }
 
 // 使用示例
+const merchantNo = '123456';
 const secretKey = 'your_secret_key_here';
 const method = 'POST';
 const path = '/admin-api/bank/open/virtual-account/create';
@@ -177,7 +182,7 @@ const signature = signRequest(secretKey, method, path, timestamp, body);
 axios.post(`https://api.example.com${path}`, body, {
     headers: {
         'Content-Type': 'application/json',
-        'X-Api-Key': secretKey,
+        'X-Api-MerchantNo': merchantNo,
         'X-Api-Timestamp': timestamp,
         'X-Api-Signature': signature,
     }
@@ -195,6 +200,7 @@ function signRequest(string $secretKey, string $method, string $path,
 }
 
 // 使用示例
+$merchantNo = '123456';
 $secretKey = 'your_secret_key_here';
 $method = 'POST';
 $path = '/admin-api/bank/open/virtual-account/create';
@@ -210,7 +216,7 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => [
         'Content-Type: application/json',
-        "X-Api-Key: {$secretKey}",
+        "X-Api-MerchantNo: {$merchantNo}",
         "X-Api-Timestamp: {$timestamp}",
         "X-Api-Signature: {$signature}",
     ],
@@ -245,7 +251,7 @@ echo $response;
 | 错误码 | 说明 |
 |---|---|
 | 0 | 成功 |
-| 1009001003 | 无效的 API Key |
+| 1009001003 | 商户号无效或不存在 |
 | 1009001004 | 签名验证失败 |
 | 1009001005 | 请求时间戳已过期 |
 | 1009001006 | 缺少必要的鉴权请求头 |
@@ -695,7 +701,7 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 ### Q: 签名验证一直失败？
 
 请检查以下几点：
-1. 确认 Secret Key 是否正确
+1. 确认商户号（`X-Api-MerchantNo`）是否正确，Secret Key 是否与后台一致且仅用于本地签名
 2. 确认待签名字符串的拼接顺序和换行符
 3. 确认时间戳是 **秒级** Unix 时间戳，不是毫秒
 4. 确认请求体是原始 JSON 字符串，没有经过额外格式化

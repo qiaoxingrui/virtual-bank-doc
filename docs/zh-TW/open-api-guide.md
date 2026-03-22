@@ -13,16 +13,17 @@
 | 資料格式 | JSON |
 | 字元編碼 | UTF-8 |
 
-### 1.2 金鑰說明
+### 1.2 金鑰與商戶號說明
 
-開通合作後，您將取得兩組金鑰：
+開通合作後，您將取得 **商戶號（Merchant No）** 以及兩組金鑰：
 
-| 金鑰 | 用途 |
+| 項目 | 用途 |
 |---|---|
-| **Secret Key** | 用於 API 請求簽章，證明請求來源的合法性 |
+| **商戶號** | 在 API 請求標頭中識別您的身分（非金鑰，可隨請求傳遞） |
+| **Secret Key** | 僅在您伺服器端本地用於計算 `X-Api-Signature`，**請勿**放入請求標頭或以明文於網路上傳輸 |
 | **Webhook Key** | 用於驗證我方回呼請求的真實性，防止偽造 |
 
-> ⚠️ 請妥善保管金鑰，切勿在用戶端程式碼、日誌或版本控制中暴露。若金鑰洩漏，請立即聯繫我們重新產生。
+> ⚠️ 請妥善保管 Secret Key 與 Webhook Key，切勿在用戶端程式碼、日誌或版本控制中暴露。Open API 請求標頭僅傳遞商戶號，伺服器端依商戶號查詢並驗章，避免 Secret Key 在網路上傳輸。若金鑰洩漏，請立即聯繫我們重新產生。
 
 ---
 
@@ -34,10 +35,12 @@
 
 | Header | 必填 | 說明 |
 |---|---|---|
-| `X-Api-Key` | 是 | 您的 Secret Key |
+| `X-Api-MerchantNo` | 是 | 您的商戶號 |
 | `X-Api-Timestamp` | 是 | 目前 Unix 時間戳記（秒） |
-| `X-Api-Signature` | 是 | HMAC-SHA256 簽章（Hex 編碼） |
+| `X-Api-Signature` | 是 | HMAC-SHA256 簽章（Hex 編碼），以 Secret Key 在本地計算 |
 | `Content-Type` | 是 | `application/json` |
+
+伺服器端依 `X-Api-MerchantNo` 查詢商戶，並以伺服器端保存的 Secret Key 與請求中的簽章比對；您在本地以 Secret Key 計算簽章，**請勿**將 Secret Key 放入請求標頭。
 
 ### 2.2 簽章演算法
 
@@ -62,7 +65,7 @@ StringToSign = HTTP_METHOD + "\n" + REQUEST_PATH + "\n" + TIMESTAMP + "\n" + REQ
 Signature = Hex( HMAC-SHA256( SecretKey, StringToSign ) )
 ```
 
-使用您的 Secret Key 作為 HMAC 金鑰，對待簽章字串進行 HMAC-SHA256 運算，然後將結果轉為十六進位小寫字串。
+在您的伺服器端以 Secret Key 作為 HMAC 金鑰，對待簽章字串進行 HMAC-SHA256 運算，然後將結果轉為十六進位小寫字串，並放入 `X-Api-Signature`。Secret Key 僅用於本地計算，不隨請求送出。
 
 ### 2.3 時間戳記驗證
 
@@ -75,7 +78,7 @@ Signature = Hex( HMAC-SHA256( SecretKey, StringToSign ) )
 POST /admin-api/bank/open/virtual-account/create HTTP/1.1
 Host: api.example.com
 Content-Type: application/json
-X-Api-Key: a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2
+X-Api-MerchantNo: 123456
 X-Api-Timestamp: 1708862400
 X-Api-Signature: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
 
@@ -130,6 +133,7 @@ def sign_request(secret_key: str, method: str, path: str,
     return signature
 
 # 使用範例
+merchant_no = "123456"
 secret_key = "your_secret_key_here"
 method = "POST"
 path = "/admin-api/bank/open/virtual-account/create"
@@ -142,7 +146,7 @@ response = requests.post(
     f"https://api.example.com{path}",
     headers={
         "Content-Type": "application/json",
-        "X-Api-Key": secret_key,
+        "X-Api-MerchantNo": merchant_no,
         "X-Api-Timestamp": timestamp,
         "X-Api-Signature": signature,
     },
@@ -166,6 +170,7 @@ function signRequest(secretKey, method, path, timestamp, body = '') {
 }
 
 // 使用範例
+const merchantNo = '123456';
 const secretKey = 'your_secret_key_here';
 const method = 'POST';
 const path = '/admin-api/bank/open/virtual-account/create';
@@ -177,7 +182,7 @@ const signature = signRequest(secretKey, method, path, timestamp, body);
 axios.post(`https://api.example.com${path}`, body, {
     headers: {
         'Content-Type': 'application/json',
-        'X-Api-Key': secretKey,
+        'X-Api-MerchantNo': merchantNo,
         'X-Api-Timestamp': timestamp,
         'X-Api-Signature': signature,
     }
@@ -195,6 +200,7 @@ function signRequest(string $secretKey, string $method, string $path,
 }
 
 // 使用範例
+$merchantNo = '123456';
 $secretKey = 'your_secret_key_here';
 $method = 'POST';
 $path = '/admin-api/bank/open/virtual-account/create';
@@ -210,7 +216,7 @@ curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => [
         'Content-Type: application/json',
-        "X-Api-Key: {$secretKey}",
+        "X-Api-MerchantNo: {$merchantNo}",
         "X-Api-Timestamp: {$timestamp}",
         "X-Api-Signature: {$signature}",
     ],
@@ -245,7 +251,7 @@ echo $response;
 | 錯誤碼 | 說明 |
 |---|---|
 | 0 | 成功 |
-| 1009001003 | 無效的 API Key |
+| 1009001003 | 商戶號無效或不存在 |
 | 1009001004 | 簽章驗證失敗 |
 | 1009001005 | 請求時間戳記已過期 |
 | 1009001006 | 缺少必要的驗證請求標頭 |
@@ -691,7 +697,7 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 ### Q: 簽章驗證一直失敗？
 
 請檢查以下幾點：
-1. 確認 Secret Key 是否正確
+1. 確認商戶號（`X-Api-MerchantNo`）是否正確，Secret Key 是否與後台一致且僅用於本地簽章
 2. 確認待簽章字串的串接順序和換行字元
 3. 確認時間戳記是**秒級** Unix 時間戳記，不是毫秒
 4. 確認請求主體是原始 JSON 字串，沒有經過額外格式化
