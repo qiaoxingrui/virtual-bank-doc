@@ -6,12 +6,12 @@ This document describes how to integrate with our Virtual Account Platform via O
 
 ### 1.1 Basic Information
 
-| Item | Description |
-|---|---|
-| Base URL | `https://{host}/admin-api` |
-| Protocol | HTTPS |
-| Data Format | JSON |
-| Encoding | UTF-8 |
+| Item | Description               |
+|---|---------------------------|
+| Base URL | `https://{host}/open-api` |
+| Protocol | HTTPS                     |
+| Data Format | JSON                      |
+| Encoding | UTF-8                     |
 
 ### 1.2 Merchant Number and Keys
 
