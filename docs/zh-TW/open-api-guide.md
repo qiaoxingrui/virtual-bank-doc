@@ -53,7 +53,7 @@ StringToSign = HTTP_METHOD + "\n" + REQUEST_PATH + "\n" + TIMESTAMP + "\n" + REQ
 | 部分 | 說明 | 範例 |
 |---|---|---|
 | HTTP_METHOD | 大寫 HTTP 方法 | `POST` |
-| REQUEST_PATH | 請求路徑（不含網域名稱和查詢參數） | `/admin-api/bank/open/virtual-account/create` |
+| REQUEST_PATH | 請求路徑（不含網域名稱和查詢參數） | `/open-api/demo/echo` |
 | TIMESTAMP | 與 `X-Api-Timestamp` 一致 | `1708862400` |
 | REQUEST_BODY | 完整的請求主體 JSON 字串，無請求主體時為空字串 | `{"type":1,"amount":1000}` |
 
@@ -74,15 +74,27 @@ Signature = Hex( HMAC-SHA256( SecretKey, StringToSign ) )
 
 ### 2.4 完整請求範例
 
+#### Echo（POST）
+
 ```http
-POST /admin-api/bank/open/virtual-account/create HTTP/1.1
+POST /open-api/demo/echo HTTP/1.1
 Host: api.example.com
 Content-Type: application/json
 X-Api-MerchantNo: 123456
 X-Api-Timestamp: 1708862400
-X-Api-Signature: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08
+X-Api-Signature: <calculated_signature>
 
-{"type":1,"amount":1000,"expireDate":"2025-12-31T23:59:59"}
+{"foo":"bar"}
+```
+
+#### Ping（GET）
+
+```http
+GET /open-api/demo/ping HTTP/1.1
+Host: api.example.com
+X-Api-MerchantNo: 123456
+X-Api-Timestamp: 1708862400
+X-Api-Signature: <calculated_signature>
 ```
 
 ### 2.5 程式碼範例
@@ -93,6 +105,11 @@ X-Api-Signature: 9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a0
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.time.Instant;
 
 public class ApiSignature {
 
@@ -109,6 +126,46 @@ public class ApiSignature {
             hex.append(String.format("%02x", b));
         }
         return hex.toString();
+    }
+
+    public static void main(String[] args) throws Exception {
+        String merchantNo = "123456";
+        String secretKey = "your_secret_key_here";
+        String baseUrl = "https://api.example.com";
+
+        HttpClient client = HttpClient.newHttpClient();
+
+        // Echo: POST /open-api/demo/echo（有 body）
+        String echoPath = "/open-api/demo/echo";
+        String echoBody = "{\"foo\":\"bar\"}";
+        String echoTimestamp = String.valueOf(Instant.now().getEpochSecond());
+        String echoSignature = sign(secretKey, "POST", echoPath, echoTimestamp, echoBody);
+
+        HttpRequest echoReq = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + echoPath))
+                .header("Content-Type", "application/json")
+                .header("X-Api-MerchantNo", merchantNo)
+                .header("X-Api-Timestamp", echoTimestamp)
+                .header("X-Api-Signature", echoSignature)
+                .POST(HttpRequest.BodyPublishers.ofString(echoBody))
+                .build();
+        HttpResponse<String> echoResp = client.send(echoReq, HttpResponse.BodyHandlers.ofString());
+        System.out.println(echoResp.body());
+
+        // Ping: GET /open-api/demo/ping（無 body）
+        String pingPath = "/open-api/demo/ping";
+        String pingTimestamp = String.valueOf(Instant.now().getEpochSecond());
+        String pingSignature = sign(secretKey, "GET", pingPath, pingTimestamp, "");
+
+        HttpRequest pingReq = HttpRequest.newBuilder()
+                .uri(URI.create(baseUrl + pingPath))
+                .header("X-Api-MerchantNo", merchantNo)
+                .header("X-Api-Timestamp", pingTimestamp)
+                .header("X-Api-Signature", pingSignature)
+                .GET()
+                .build();
+        HttpResponse<String> pingResp = client.send(pingReq, HttpResponse.BodyHandlers.ofString());
+        System.out.println(pingResp.body());
     }
 }
 ```
@@ -132,27 +189,45 @@ def sign_request(secret_key: str, method: str, path: str,
     ).hexdigest()
     return signature
 
-# 使用範例
+# 使用範例（Echo & Ping）
 merchant_no = "123456"
 secret_key = "your_secret_key_here"
-method = "POST"
-path = "/admin-api/bank/open/virtual-account/create"
-timestamp = str(int(time.time()))
-body = json.dumps({"type": 1, "amount": 1000})
+base_url = "https://api.example.com"
 
-signature = sign_request(secret_key, method, path, timestamp, body)
+# Echo: POST /open-api/demo/echo
+echo_method = "POST"
+echo_path = "/open-api/demo/echo"
+echo_body = json.dumps({"foo": "bar"})
+echo_timestamp = str(int(time.time()))
+echo_signature = sign_request(secret_key, echo_method, echo_path, echo_timestamp, echo_body)
 
-response = requests.post(
-    f"https://api.example.com{path}",
+echo_resp = requests.post(
+    f"{base_url}{echo_path}",
     headers={
         "Content-Type": "application/json",
         "X-Api-MerchantNo": merchant_no,
-        "X-Api-Timestamp": timestamp,
-        "X-Api-Signature": signature,
+        "X-Api-Timestamp": echo_timestamp,
+        "X-Api-Signature": echo_signature,
     },
-    data=body
+    data=echo_body
 )
-print(response.json())
+print(echo_resp.json())
+
+# Ping: GET /open-api/demo/ping
+ping_method = "GET"
+ping_path = "/open-api/demo/ping"
+ping_timestamp = str(int(time.time()))
+ping_signature = sign_request(secret_key, ping_method, ping_path, ping_timestamp, "")
+
+ping_resp = requests.get(
+    f"{base_url}{ping_path}",
+    headers={
+        "X-Api-MerchantNo": merchant_no,
+        "X-Api-Timestamp": ping_timestamp,
+        "X-Api-Signature": ping_signature,
+    }
+)
+print(ping_resp.json())
 ```
 
 #### Node.js
@@ -169,24 +244,44 @@ function signRequest(secretKey, method, path, timestamp, body = '') {
         .digest('hex');
 }
 
-// 使用範例
+// 使用範例（Echo & Ping）
 const merchantNo = '123456';
 const secretKey = 'your_secret_key_here';
-const method = 'POST';
-const path = '/admin-api/bank/open/virtual-account/create';
-const timestamp = Math.floor(Date.now() / 1000).toString();
-const body = JSON.stringify({ type: 1, amount: 1000 });
+const baseUrl = 'https://api.example.com';
 
-const signature = signRequest(secretKey, method, path, timestamp, body);
+(async () => {
+    // Echo: POST /open-api/demo/echo
+    const echoPath = '/open-api/demo/echo';
+    const echoMethod = 'POST';
+    const echoBody = JSON.stringify({ foo: 'bar' });
+    const echoTimestamp = Math.floor(Date.now() / 1000).toString();
+    const echoSignature = signRequest(secretKey, echoMethod, echoPath, echoTimestamp, echoBody);
 
-axios.post(`https://api.example.com${path}`, body, {
-    headers: {
-        'Content-Type': 'application/json',
-        'X-Api-MerchantNo': merchantNo,
-        'X-Api-Timestamp': timestamp,
-        'X-Api-Signature': signature,
-    }
-}).then(res => console.log(res.data));
+    const echoResp = await axios.post(`${baseUrl}${echoPath}`, echoBody, {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Api-MerchantNo': merchantNo,
+            'X-Api-Timestamp': echoTimestamp,
+            'X-Api-Signature': echoSignature,
+        }
+    });
+    console.log(echoResp.data);
+
+    // Ping: GET /open-api/demo/ping
+    const pingPath = '/open-api/demo/ping';
+    const pingMethod = 'GET';
+    const pingTimestamp = Math.floor(Date.now() / 1000).toString();
+    const pingSignature = signRequest(secretKey, pingMethod, pingPath, pingTimestamp, '');
+
+    const pingResp = await axios.get(`${baseUrl}${pingPath}`, {
+        headers: {
+            'X-Api-MerchantNo': merchantNo,
+            'X-Api-Timestamp': pingTimestamp,
+            'X-Api-Signature': pingSignature,
+        }
+    });
+    console.log(pingResp.data);
+})();
 ```
 
 #### PHP
@@ -202,28 +297,148 @@ function signRequest(string $secretKey, string $method, string $path,
 // 使用範例
 $merchantNo = '123456';
 $secretKey = 'your_secret_key_here';
-$method = 'POST';
-$path = '/admin-api/bank/open/virtual-account/create';
-$timestamp = (string)time();
-$body = json_encode(['type' => 1, 'amount' => 1000]);
+$baseUrl = 'https://api.example.com';
 
-$signature = signRequest($secretKey, $method, $path, $timestamp, $body);
+// Echo: POST /open-api/demo/echo
+$echoPath = '/open-api/demo/echo';
+$echoMethod = 'POST';
+$echoBody = json_encode(['foo' => 'bar']);
+$echoTimestamp = (string)time();
+$echoSignature = signRequest($secretKey, $echoMethod, $echoPath, $echoTimestamp, $echoBody);
 
-$ch = curl_init("https://api.example.com{$path}");
+$ch = curl_init("{$baseUrl}{$echoPath}");
 curl_setopt_array($ch, [
     CURLOPT_POST => true,
-    CURLOPT_POSTFIELDS => $body,
+    CURLOPT_POSTFIELDS => $echoBody,
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_HTTPHEADER => [
         'Content-Type: application/json',
         "X-Api-MerchantNo: {$merchantNo}",
-        "X-Api-Timestamp: {$timestamp}",
-        "X-Api-Signature: {$signature}",
+        "X-Api-Timestamp: {$echoTimestamp}",
+        "X-Api-Signature: {$echoSignature}",
     ],
 ]);
-$response = curl_exec($ch);
+$echoResp = curl_exec($ch);
 curl_close($ch);
-echo $response;
+echo $echoResp;
+
+// Ping: GET /open-api/demo/ping
+$pingPath = '/open-api/demo/ping';
+$pingMethod = 'GET';
+$pingTimestamp = (string)time();
+$pingSignature = signRequest($secretKey, $pingMethod, $pingPath, $pingTimestamp, '');
+
+$ch = curl_init("{$baseUrl}{$pingPath}");
+curl_setopt_array($ch, [
+    CURLOPT_HTTPGET => true,
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_HTTPHEADER => [
+        "X-Api-MerchantNo: {$merchantNo}",
+        "X-Api-Timestamp: {$pingTimestamp}",
+        "X-Api-Signature: {$pingSignature}",
+    ],
+]);
+$pingResp = curl_exec($ch);
+curl_close($ch);
+echo $pingResp;
+```
+
+#### Go
+
+```go
+package main
+
+import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
+	"fmt"
+	"io"
+	"net/http"
+	"net/url"
+	"strconv"
+	"strings"
+	"time"
+)
+
+func signRequest(secretKey, method, requestURI, timestamp, body string) string {
+	stringToSign := method + "\n" + requestURI + "\n" + timestamp + "\n" + body
+	mac := hmac.New(sha256.New, []byte(secretKey))
+	_, _ = mac.Write([]byte(stringToSign))
+	return hex.EncodeToString(mac.Sum(nil))
+}
+
+func doEcho(baseURL, merchantNo, secretKey string) error {
+	method := "POST"
+	localPath := "/open-api/demo/echo"
+	body := `{"foo":"bar"}`
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	fullURL := baseURL + localPath
+	u, err := url.Parse(fullURL)
+	if err != nil {
+		return err
+	}
+	requestURI := u.EscapedPath()
+	signature := signRequest(secretKey, method, requestURI, timestamp, body)
+
+	req, err := http.NewRequest(method, fullURL, strings.NewReader(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Api-MerchantNo", merchantNo)
+	req.Header.Set("X-Api-Timestamp", timestamp)
+	req.Header.Set("X-Api-Signature", signature)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(b))
+	return nil
+}
+
+func doPing(baseURL, merchantNo, secretKey string) error {
+	method := "GET"
+	localPath := "/open-api/demo/ping"
+	body := ""
+	timestamp := strconv.FormatInt(time.Now().Unix(), 10)
+	fullURL := baseURL + localPath
+	u, err := url.Parse(fullURL)
+	if err != nil {
+		return err
+	}
+	requestURI := u.EscapedPath()
+	signature := signRequest(secretKey, method, requestURI, timestamp, body)
+
+	req, err := http.NewRequest(method, fullURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("X-Api-MerchantNo", merchantNo)
+	req.Header.Set("X-Api-Timestamp", timestamp)
+	req.Header.Set("X-Api-Signature", signature)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	fmt.Println(string(b))
+	return nil
+}
+
+func main() {
+	baseURL := "https://api.example.com"
+	merchantNo := "123456"
+	secretKey := "your_secret_key_here"
+
+	_ = doEcho(baseURL, merchantNo, secretKey)
+	_ = doPing(baseURL, merchantNo, secretKey)
+}
 ```
 
 ---

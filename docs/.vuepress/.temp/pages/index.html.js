@@ -1,3 +1,16 @@
 import comp from "/Users/sunray/Documents/virtual-bank-doc/virtual-bank-doc/docs/.vuepress/.temp/pages/index.html.vue"
-const data = JSON.parse("{\"path\":\"/\",\"title\":\"虚拟账号平台\",\"lang\":\"zh-CN\",\"frontmatter\":{\"home\":true,\"title\":\"虚拟账号平台\",\"heroText\":\"虚拟账号平台\",\"tagline\":\"Open API 对接文档\",\"actions\":[{\"text\":\"查看对接指南\",\"link\":\"/open-api-guide.html\",\"type\":\"primary\"}],\"features\":[{\"title\":\"HMAC-SHA256 签名\",\"details\":\"基于 HMAC-SHA256 的请求签名机制，确保每一次 API 调用的安全性与完整性。\"},{\"title\":\"Webhook 实时通知\",\"details\":\"入金完成后自动推送 Webhook 通知，支持签名验证与指数退避重试策略。\"},{\"title\":\"多语言代码示例\",\"details\":\"提供 Java、Python、Node.js、PHP 等多种语言的签名与验签代码示例。\"}],\"footer\":\"Copyright © 2025 Virtual Account Platform\"},\"headers\":[],\"git\":{\"updatedTime\":1772095382000,\"contributors\":[{\"name\":\"sunray\",\"username\":\"sunray\",\"email\":\"q3565785@gmail.com\",\"commits\":1,\"url\":\"https://github.com/sunray\"}],\"changelog\":[{\"hash\":\"d342b3aed6beaa80718dd6442e43325b9cdad44c\",\"time\":1772095382000,\"email\":\"q3565785@gmail.com\",\"author\":\"sunray\",\"message\":\"init\"}]},\"filePathRelative\":\"README.md\"}")
+const data = JSON.parse("{\"path\":\"/\",\"title\":\"虚拟账号平台\",\"lang\":\"zh-CN\",\"frontmatter\":{\"home\":true,\"title\":\"虚拟账号平台\",\"heroText\":\"虚拟账号平台\",\"tagline\":\"Open API 对接文档\",\"actions\":[{\"text\":\"查看对接指南\",\"link\":\"/open-api-guide.html\",\"type\":\"primary\"}],\"features\":[{\"title\":\"HMAC-SHA256 签名\",\"details\":\"基于 HMAC-SHA256 的请求签名机制，确保每一次 API 调用的安全性与完整性。\"},{\"title\":\"Webhook 实时通知\",\"details\":\"入金完成后自动推送 Webhook 通知，支持签名验证与指数退避重试策略。\"},{\"title\":\"多语言代码示例\",\"details\":\"提供 Java、Python、Node.js、PHP 等多种语言的签名与验签代码示例。\"}],\"footer\":\"Copyright © 2025 Virtual Account Platform\"},\"headers\":[],\"git\":{\"updatedTime\":1772096602000,\"contributors\":[{\"name\":\"sunray\",\"username\":\"sunray\",\"email\":\"q3565785@gmail.com\",\"commits\":2,\"url\":\"https://github.com/sunray\"}],\"changelog\":[{\"hash\":\"438e9cc02dfd6790d8eb841702ce911a8acf86b0\",\"time\":1772096602000,\"email\":\"q3565785@gmail.com\",\"author\":\"sunray\",\"message\":\"init\"},{\"hash\":\"d342b3aed6beaa80718dd6442e43325b9cdad44c\",\"time\":1772095382000,\"email\":\"q3565785@gmail.com\",\"author\":\"sunray\",\"message\":\"init\"}]},\"filePathRelative\":\"README.md\"}")
 export { comp, data }
+
+if (import.meta.webpackHot) {
+  import.meta.webpackHot.accept()
+  if (__VUE_HMR_RUNTIME__.updatePageData) {
+    __VUE_HMR_RUNTIME__.updatePageData(data)
+  }
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept(({ data }) => {
+    __VUE_HMR_RUNTIME__.updatePageData(data)
+  })
+}

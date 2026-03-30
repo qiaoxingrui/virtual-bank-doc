@@ -12,7 +12,7 @@
 <tbody>
 <tr>
 <td>Base URL</td>
-<td><code v-pre>https://{host}/admin-api</code></td>
+<td><code v-pre>https://{host}/open-api</code></td>
 </tr>
 <tr>
 <td>Protocol</td>
@@ -28,19 +28,23 @@
 </tr>
 </tbody>
 </table>
-<h3 id="_1-2-key-descriptions" tabindex="-1"><a class="header-anchor" href="#_1-2-key-descriptions"><span>1.2 Key Descriptions</span></a></h3>
-<p>After onboarding, you will receive two sets of keys:</p>
+<h3 id="_1-2-merchant-number-and-keys" tabindex="-1"><a class="header-anchor" href="#_1-2-merchant-number-and-keys"><span>1.2 Merchant Number and Keys</span></a></h3>
+<p>After onboarding, you will receive a <strong>Merchant Number</strong> and two keys:</p>
 <table>
 <thead>
 <tr>
-<th>Key</th>
+<th>Item</th>
 <th>Purpose</th>
 </tr>
 </thead>
 <tbody>
 <tr>
+<td><strong>Merchant Number</strong></td>
+<td>Sent in API request headers to identify your account (not a secret; safe to include in requests)</td>
+</tr>
+<tr>
 <td><strong>Secret Key</strong></td>
-<td>Used for API request signing to verify the legitimacy of the request origin</td>
+<td>Used only on your server to compute <code v-pre>X-Api-Signature</code>; <strong>do not</strong> put it in headers or send it in plain text over the network</td>
 </tr>
 <tr>
 <td><strong>Webhook Key</strong></td>
@@ -49,7 +53,7 @@
 </tbody>
 </table>
 <blockquote>
-<p>⚠️ Keep your keys secure. Never expose them in client-side code, logs, or version control. If a key is compromised, contact us immediately to regenerate it.</p>
+<p>⚠️ Keep your Secret Key and Webhook Key secure. Never expose them in client-side code, logs, or version control. Open API headers carry only the merchant number; the server looks up your merchant and verifies the signature using the stored Secret Key, so the Secret Key is not transmitted on each request. If a key is compromised, contact us immediately to regenerate it.</p>
 </blockquote>
 <hr>
 <h2 id="_2-api-request-signing" tabindex="-1"><a class="header-anchor" href="#_2-api-request-signing"><span>2. API Request Signing</span></a></h2>
@@ -65,9 +69,9 @@
 </thead>
 <tbody>
 <tr>
-<td><code v-pre>X-Api-Key</code></td>
+<td><code v-pre>X-Api-MerchantNo</code></td>
 <td>Yes</td>
-<td>Your Secret Key</td>
+<td>Your merchant number</td>
 </tr>
 <tr>
 <td><code v-pre>X-Api-Timestamp</code></td>
@@ -77,7 +81,7 @@
 <tr>
 <td><code v-pre>X-Api-Signature</code></td>
 <td>Yes</td>
-<td>HMAC-SHA256 signature (hex-encoded)</td>
+<td>HMAC-SHA256 signature (hex-encoded), computed locally with your Secret Key</td>
 </tr>
 <tr>
 <td><code v-pre>Content-Type</code></td>
@@ -86,6 +90,7 @@
 </tr>
 </tbody>
 </table>
+<p>The server resolves <code v-pre>X-Api-MerchantNo</code> to your merchant record and uses the stored Secret Key to verify the signature. You compute the signature with your Secret Key locally; <strong>do not</strong> send the Secret Key in a header.</p>
 <h3 id="_2-2-signature-algorithm" tabindex="-1"><a class="header-anchor" href="#_2-2-signature-algorithm"><span>2.2 Signature Algorithm</span></a></h3>
 <p><strong>Step 1: Construct the string to sign</strong></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">StringToSign = HTTP_METHOD + "\n" + REQUEST_PATH + "\n" + TIMESTAMP + "\n" + REQUEST_BODY</span>
@@ -107,7 +112,7 @@
 <tr>
 <td>REQUEST_PATH</td>
 <td>Request path (without domain and query parameters)</td>
-<td><code v-pre>/admin-api/bank/open/virtual-account/create</code></td>
+<td><code v-pre>/open-api/demo/echo</code></td>
 </tr>
 <tr>
 <td>TIMESTAMP</td>
@@ -127,27 +132,40 @@
 <p><strong>Step 2: Compute HMAC-SHA256</strong></p>
 <div class="language-text line-numbers-mode" data-highlighter="prismjs" data-ext="text"><pre v-pre><code><span class="line">Signature = Hex( HMAC-SHA256( SecretKey, StringToSign ) )</span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>Use your Secret Key as the HMAC key to perform HMAC-SHA256 on the string to sign, then convert the result to a lowercase hexadecimal string.</p>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div></div></div><p>On your server, use your Secret Key as the HMAC key to perform HMAC-SHA256 on the string to sign, then convert the result to a lowercase hexadecimal string and set it in <code v-pre>X-Api-Signature</code>. The Secret Key is only used for local signing and is not sent with the request.</p>
 <h3 id="_2-3-timestamp-validation" tabindex="-1"><a class="header-anchor" href="#_2-3-timestamp-validation"><span>2.3 Timestamp Validation</span></a></h3>
 <ul>
 <li>The server validates the timestamp deviation from the current time, with an allowed range of <strong>±5 minutes</strong></li>
 <li>Please ensure your server clock is synchronized with an NTP server</li>
 </ul>
 <h3 id="_2-4-complete-request-example" tabindex="-1"><a class="header-anchor" href="#_2-4-complete-request-example"><span>2.4 Complete Request Example</span></a></h3>
-<div class="language-http line-numbers-mode" data-highlighter="prismjs" data-ext="http"><pre v-pre><code><span class="line"><span class="token request-line"><span class="token method property">POST</span> <span class="token request-target url">/admin-api/bank/open/virtual-account/create</span> <span class="token http-version property">HTTP/1.1</span></span></span>
+<h4 id="echo-post" tabindex="-1"><a class="header-anchor" href="#echo-post"><span>Echo (POST)</span></a></h4>
+<div class="language-http line-numbers-mode" data-highlighter="prismjs" data-ext="http"><pre v-pre><code><span class="line"><span class="token request-line"><span class="token method property">POST</span> <span class="token request-target url">/open-api/demo/echo</span> <span class="token http-version property">HTTP/1.1</span></span></span>
 <span class="line"><span class="token header"><span class="token header-name keyword">Host</span><span class="token punctuation">:</span> <span class="token header-value">api.example.com</span></span></span>
 <span class="line"><span class="token header"><span class="token header-name keyword">Content-Type</span><span class="token punctuation">:</span> <span class="token header-value">application/json</span></span></span>
-<span class="line"><span class="token header"><span class="token header-name keyword">X-Api-Key</span><span class="token punctuation">:</span> <span class="token header-value">a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2</span></span></span>
+<span class="line"><span class="token header"><span class="token header-name keyword">X-Api-MerchantNo</span><span class="token punctuation">:</span> <span class="token header-value">123456</span></span></span>
 <span class="line"><span class="token header"><span class="token header-name keyword">X-Api-Timestamp</span><span class="token punctuation">:</span> <span class="token header-value">1708862400</span></span></span>
-<span class="line"><span class="token header"><span class="token header-name keyword">X-Api-Signature</span><span class="token punctuation">:</span> <span class="token header-value">9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08</span></span></span>
+<span class="line"><span class="token header"><span class="token header-name keyword">X-Api-Signature</span><span class="token punctuation">:</span> <span class="token header-value">&lt;calculated_signature></span></span></span>
 <span class="line"><span class="token application-json"></span>
-<span class="line"><span class="token punctuation">{</span><span class="token string-property property">"type"</span><span class="token operator">:</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token string-property property">"amount"</span><span class="token operator">:</span><span class="token number">1000</span><span class="token punctuation">,</span><span class="token string-property property">"expireDate"</span><span class="token operator">:</span><span class="token string">"2025-12-31T23:59:59"</span><span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">{</span><span class="token property">"foo"</span><span class="token operator">:</span><span class="token string">"bar"</span><span class="token punctuation">}</span></span>
 <span class="line"></span></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="_2-5-code-samples" tabindex="-1"><a class="header-anchor" href="#_2-5-code-samples"><span>2.5 Code Samples</span></a></h3>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="ping-get" tabindex="-1"><a class="header-anchor" href="#ping-get"><span>Ping (GET)</span></a></h4>
+<div class="language-http line-numbers-mode" data-highlighter="prismjs" data-ext="http"><pre v-pre><code><span class="line"><span class="token request-line"><span class="token method property">GET</span> <span class="token request-target url">/open-api/demo/ping</span> <span class="token http-version property">HTTP/1.1</span></span></span>
+<span class="line"><span class="token header"><span class="token header-name keyword">Host</span><span class="token punctuation">:</span> <span class="token header-value">api.example.com</span></span></span>
+<span class="line"><span class="token header"><span class="token header-name keyword">X-Api-MerchantNo</span><span class="token punctuation">:</span> <span class="token header-value">123456</span></span></span>
+<span class="line"><span class="token header"><span class="token header-name keyword">X-Api-Timestamp</span><span class="token punctuation">:</span> <span class="token header-value">1708862400</span></span></span>
+<span class="line"><span class="token header"><span class="token header-name keyword">X-Api-Signature</span><span class="token punctuation">:</span> <span class="token header-value">&lt;calculated_signature></span></span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="_2-5-code-samples" tabindex="-1"><a class="header-anchor" href="#_2-5-code-samples"><span>2.5 Code Samples</span></a></h3>
 <h4 id="java" tabindex="-1"><a class="header-anchor" href="#java"><span>Java</span></a></h4>
 <div class="language-java line-numbers-mode" data-highlighter="prismjs" data-ext="java"><pre v-pre><code><span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>crypto<span class="token punctuation">.</span></span><span class="token class-name">Mac</span></span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>crypto<span class="token punctuation">.</span>spec<span class="token punctuation">.</span></span><span class="token class-name">SecretKeySpec</span></span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>nio<span class="token punctuation">.</span>charset<span class="token punctuation">.</span></span><span class="token class-name">StandardCharsets</span></span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>net<span class="token punctuation">.</span></span><span class="token class-name">URI</span></span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>net<span class="token punctuation">.</span>http<span class="token punctuation">.</span></span><span class="token class-name">HttpClient</span></span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>net<span class="token punctuation">.</span>http<span class="token punctuation">.</span></span><span class="token class-name">HttpRequest</span></span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>net<span class="token punctuation">.</span>http<span class="token punctuation">.</span></span><span class="token class-name">HttpResponse</span></span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>time<span class="token punctuation">.</span></span><span class="token class-name">Instant</span></span><span class="token punctuation">;</span></span>
 <span class="line"></span>
 <span class="line"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ApiSignature</span> <span class="token punctuation">{</span></span>
 <span class="line"></span>
@@ -165,9 +183,49 @@
 <span class="line">        <span class="token punctuation">}</span></span>
 <span class="line">        <span class="token keyword">return</span> hex<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line">    <span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line">    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">Exception</span> <span class="token punctuation">{</span></span>
+<span class="line">        <span class="token class-name">String</span> merchantNo <span class="token operator">=</span> <span class="token string">"123456"</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token class-name">String</span> secretKey <span class="token operator">=</span> <span class="token string">"your_secret_key_here"</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token class-name">String</span> baseUrl <span class="token operator">=</span> <span class="token string">"https://api.example.com"</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">        <span class="token class-name">HttpClient</span> client <span class="token operator">=</span> <span class="token class-name">HttpClient</span><span class="token punctuation">.</span><span class="token function">newHttpClient</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">        <span class="token comment">// Echo: POST /open-api/demo/echo (with body)</span></span>
+<span class="line">        <span class="token class-name">String</span> echoPath <span class="token operator">=</span> <span class="token string">"/open-api/demo/echo"</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token class-name">String</span> echoBody <span class="token operator">=</span> <span class="token string">"{\"foo\":\"bar\"}"</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token class-name">String</span> echoTimestamp <span class="token operator">=</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span><span class="token class-name">Instant</span><span class="token punctuation">.</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getEpochSecond</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token class-name">String</span> echoSignature <span class="token operator">=</span> <span class="token function">sign</span><span class="token punctuation">(</span>secretKey<span class="token punctuation">,</span> <span class="token string">"POST"</span><span class="token punctuation">,</span> echoPath<span class="token punctuation">,</span> echoTimestamp<span class="token punctuation">,</span> echoBody<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">        <span class="token class-name">HttpRequest</span> echoReq <span class="token operator">=</span> <span class="token class-name">HttpRequest</span><span class="token punctuation">.</span><span class="token function">newBuilder</span><span class="token punctuation">(</span><span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">uri</span><span class="token punctuation">(</span><span class="token constant">URI</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span>baseUrl <span class="token operator">+</span> echoPath<span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">header</span><span class="token punctuation">(</span><span class="token string">"Content-Type"</span><span class="token punctuation">,</span> <span class="token string">"application/json"</span><span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">header</span><span class="token punctuation">(</span><span class="token string">"X-Api-MerchantNo"</span><span class="token punctuation">,</span> merchantNo<span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">header</span><span class="token punctuation">(</span><span class="token string">"X-Api-Timestamp"</span><span class="token punctuation">,</span> echoTimestamp<span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">header</span><span class="token punctuation">(</span><span class="token string">"X-Api-Signature"</span><span class="token punctuation">,</span> echoSignature<span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">POST</span><span class="token punctuation">(</span><span class="token class-name">HttpRequest<span class="token punctuation">.</span>BodyPublishers</span><span class="token punctuation">.</span><span class="token function">ofString</span><span class="token punctuation">(</span>echoBody<span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token class-name">HttpResponse</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> echoResp <span class="token operator">=</span> client<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>echoReq<span class="token punctuation">,</span> <span class="token class-name">HttpResponse<span class="token punctuation">.</span>BodyHandlers</span><span class="token punctuation">.</span><span class="token function">ofString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>echoResp<span class="token punctuation">.</span><span class="token function">body</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">        <span class="token comment">// Ping: GET /open-api/demo/ping (no body)</span></span>
+<span class="line">        <span class="token class-name">String</span> pingPath <span class="token operator">=</span> <span class="token string">"/open-api/demo/ping"</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token class-name">String</span> pingTimestamp <span class="token operator">=</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span><span class="token class-name">Instant</span><span class="token punctuation">.</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getEpochSecond</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token class-name">String</span> pingSignature <span class="token operator">=</span> <span class="token function">sign</span><span class="token punctuation">(</span>secretKey<span class="token punctuation">,</span> <span class="token string">"GET"</span><span class="token punctuation">,</span> pingPath<span class="token punctuation">,</span> pingTimestamp<span class="token punctuation">,</span> <span class="token string">""</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">        <span class="token class-name">HttpRequest</span> pingReq <span class="token operator">=</span> <span class="token class-name">HttpRequest</span><span class="token punctuation">.</span><span class="token function">newBuilder</span><span class="token punctuation">(</span><span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">uri</span><span class="token punctuation">(</span><span class="token constant">URI</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span>baseUrl <span class="token operator">+</span> pingPath<span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">header</span><span class="token punctuation">(</span><span class="token string">"X-Api-MerchantNo"</span><span class="token punctuation">,</span> merchantNo<span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">header</span><span class="token punctuation">(</span><span class="token string">"X-Api-Timestamp"</span><span class="token punctuation">,</span> pingTimestamp<span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">header</span><span class="token punctuation">(</span><span class="token string">"X-Api-Signature"</span><span class="token punctuation">,</span> pingSignature<span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">GET</span><span class="token punctuation">(</span><span class="token punctuation">)</span></span>
+<span class="line">                <span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token class-name">HttpResponse</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">></span></span> pingResp <span class="token operator">=</span> client<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>pingReq<span class="token punctuation">,</span> <span class="token class-name">HttpResponse<span class="token punctuation">.</span>BodyHandlers</span><span class="token punctuation">.</span><span class="token function">ofString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>pingResp<span class="token punctuation">.</span><span class="token function">body</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token punctuation">}</span></span>
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="python" tabindex="-1"><a class="header-anchor" href="#python"><span>Python</span></a></h4>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="python" tabindex="-1"><a class="header-anchor" href="#python"><span>Python</span></a></h4>
 <div class="language-python line-numbers-mode" data-highlighter="prismjs" data-ext="py"><pre v-pre><code><span class="line"><span class="token keyword">import</span> hmac</span>
 <span class="line"><span class="token keyword">import</span> hashlib</span>
 <span class="line"><span class="token keyword">import</span> time</span>
@@ -184,28 +242,47 @@
 <span class="line">    <span class="token punctuation">)</span><span class="token punctuation">.</span>hexdigest<span class="token punctuation">(</span><span class="token punctuation">)</span></span>
 <span class="line">    <span class="token keyword">return</span> signature</span>
 <span class="line"></span>
-<span class="line"><span class="token comment"># Usage example</span></span>
+<span class="line"><span class="token comment"># Usage example (Echo &amp; Ping)</span></span>
+<span class="line">merchant_no <span class="token operator">=</span> <span class="token string">"123456"</span></span>
 <span class="line">secret_key <span class="token operator">=</span> <span class="token string">"your_secret_key_here"</span></span>
-<span class="line">method <span class="token operator">=</span> <span class="token string">"POST"</span></span>
-<span class="line">path <span class="token operator">=</span> <span class="token string">"/admin-api/bank/open/virtual-account/create"</span></span>
-<span class="line">timestamp <span class="token operator">=</span> <span class="token builtin">str</span><span class="token punctuation">(</span><span class="token builtin">int</span><span class="token punctuation">(</span>time<span class="token punctuation">.</span>time<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span></span>
-<span class="line">body <span class="token operator">=</span> json<span class="token punctuation">.</span>dumps<span class="token punctuation">(</span><span class="token punctuation">{</span><span class="token string">"type"</span><span class="token punctuation">:</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">"amount"</span><span class="token punctuation">:</span> <span class="token number">1000</span><span class="token punctuation">}</span><span class="token punctuation">)</span></span>
+<span class="line">base_url <span class="token operator">=</span> <span class="token string">"https://api.example.com"</span></span>
 <span class="line"></span>
-<span class="line">signature <span class="token operator">=</span> sign_request<span class="token punctuation">(</span>secret_key<span class="token punctuation">,</span> method<span class="token punctuation">,</span> path<span class="token punctuation">,</span> timestamp<span class="token punctuation">,</span> body<span class="token punctuation">)</span></span>
+<span class="line"><span class="token comment"># Echo: POST /open-api/demo/echo</span></span>
+<span class="line">echo_method <span class="token operator">=</span> <span class="token string">"POST"</span></span>
+<span class="line">echo_path <span class="token operator">=</span> <span class="token string">"/open-api/demo/echo"</span></span>
+<span class="line">echo_body <span class="token operator">=</span> json<span class="token punctuation">.</span>dumps<span class="token punctuation">(</span><span class="token punctuation">{</span><span class="token string">"foo"</span><span class="token punctuation">:</span> <span class="token string">"bar"</span><span class="token punctuation">}</span><span class="token punctuation">)</span></span>
+<span class="line">echo_timestamp <span class="token operator">=</span> <span class="token builtin">str</span><span class="token punctuation">(</span><span class="token builtin">int</span><span class="token punctuation">(</span>time<span class="token punctuation">.</span>time<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line">echo_signature <span class="token operator">=</span> sign_request<span class="token punctuation">(</span>secret_key<span class="token punctuation">,</span> echo_method<span class="token punctuation">,</span> echo_path<span class="token punctuation">,</span> echo_timestamp<span class="token punctuation">,</span> echo_body<span class="token punctuation">)</span></span>
 <span class="line"></span>
-<span class="line">response <span class="token operator">=</span> requests<span class="token punctuation">.</span>post<span class="token punctuation">(</span></span>
-<span class="line">    <span class="token string-interpolation"><span class="token string">f"https://api.example.com</span><span class="token interpolation"><span class="token punctuation">{</span>path<span class="token punctuation">}</span></span><span class="token string">"</span></span><span class="token punctuation">,</span></span>
+<span class="line">echo_resp <span class="token operator">=</span> requests<span class="token punctuation">.</span>post<span class="token punctuation">(</span></span>
+<span class="line">    <span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">{</span>base_url<span class="token punctuation">}</span></span><span class="token interpolation"><span class="token punctuation">{</span>echo_path<span class="token punctuation">}</span></span><span class="token string">"</span></span><span class="token punctuation">,</span></span>
 <span class="line">    headers<span class="token operator">=</span><span class="token punctuation">{</span></span>
 <span class="line">        <span class="token string">"Content-Type"</span><span class="token punctuation">:</span> <span class="token string">"application/json"</span><span class="token punctuation">,</span></span>
-<span class="line">        <span class="token string">"X-Api-Key"</span><span class="token punctuation">:</span> secret_key<span class="token punctuation">,</span></span>
-<span class="line">        <span class="token string">"X-Api-Timestamp"</span><span class="token punctuation">:</span> timestamp<span class="token punctuation">,</span></span>
-<span class="line">        <span class="token string">"X-Api-Signature"</span><span class="token punctuation">:</span> signature<span class="token punctuation">,</span></span>
+<span class="line">        <span class="token string">"X-Api-MerchantNo"</span><span class="token punctuation">:</span> merchant_no<span class="token punctuation">,</span></span>
+<span class="line">        <span class="token string">"X-Api-Timestamp"</span><span class="token punctuation">:</span> echo_timestamp<span class="token punctuation">,</span></span>
+<span class="line">        <span class="token string">"X-Api-Signature"</span><span class="token punctuation">:</span> echo_signature<span class="token punctuation">,</span></span>
 <span class="line">    <span class="token punctuation">}</span><span class="token punctuation">,</span></span>
-<span class="line">    data<span class="token operator">=</span>body</span>
+<span class="line">    data<span class="token operator">=</span>echo_body</span>
 <span class="line"><span class="token punctuation">)</span></span>
-<span class="line"><span class="token keyword">print</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span>json<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line"><span class="token keyword">print</span><span class="token punctuation">(</span>echo_resp<span class="token punctuation">.</span>json<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line"></span>
+<span class="line"><span class="token comment"># Ping: GET /open-api/demo/ping</span></span>
+<span class="line">ping_method <span class="token operator">=</span> <span class="token string">"GET"</span></span>
+<span class="line">ping_path <span class="token operator">=</span> <span class="token string">"/open-api/demo/ping"</span></span>
+<span class="line">ping_timestamp <span class="token operator">=</span> <span class="token builtin">str</span><span class="token punctuation">(</span><span class="token builtin">int</span><span class="token punctuation">(</span>time<span class="token punctuation">.</span>time<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line">ping_signature <span class="token operator">=</span> sign_request<span class="token punctuation">(</span>secret_key<span class="token punctuation">,</span> ping_method<span class="token punctuation">,</span> ping_path<span class="token punctuation">,</span> ping_timestamp<span class="token punctuation">,</span> <span class="token string">""</span><span class="token punctuation">)</span></span>
+<span class="line"></span>
+<span class="line">ping_resp <span class="token operator">=</span> requests<span class="token punctuation">.</span>get<span class="token punctuation">(</span></span>
+<span class="line">    <span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">{</span>base_url<span class="token punctuation">}</span></span><span class="token interpolation"><span class="token punctuation">{</span>ping_path<span class="token punctuation">}</span></span><span class="token string">"</span></span><span class="token punctuation">,</span></span>
+<span class="line">    headers<span class="token operator">=</span><span class="token punctuation">{</span></span>
+<span class="line">        <span class="token string">"X-Api-MerchantNo"</span><span class="token punctuation">:</span> merchant_no<span class="token punctuation">,</span></span>
+<span class="line">        <span class="token string">"X-Api-Timestamp"</span><span class="token punctuation">:</span> ping_timestamp<span class="token punctuation">,</span></span>
+<span class="line">        <span class="token string">"X-Api-Signature"</span><span class="token punctuation">:</span> ping_signature<span class="token punctuation">,</span></span>
+<span class="line">    <span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">)</span></span>
+<span class="line"><span class="token keyword">print</span><span class="token punctuation">(</span>ping_resp<span class="token punctuation">.</span>json<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span></span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="node-js" tabindex="-1"><a class="header-anchor" href="#node-js"><span>Node.js</span></a></h4>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="node-js" tabindex="-1"><a class="header-anchor" href="#node-js"><span>Node.js</span></a></h4>
 <div class="language-javascript line-numbers-mode" data-highlighter="prismjs" data-ext="js"><pre v-pre><code><span class="line"><span class="token keyword">const</span> crypto <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'crypto'</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">const</span> axios <span class="token operator">=</span> <span class="token function">require</span><span class="token punctuation">(</span><span class="token string">'axios'</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"></span>
@@ -217,25 +294,46 @@
 <span class="line">        <span class="token punctuation">.</span><span class="token function">digest</span><span class="token punctuation">(</span><span class="token string">'hex'</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span>
-<span class="line"><span class="token comment">// Usage example</span></span>
+<span class="line"><span class="token comment">// Usage example (Echo &amp; Ping)</span></span>
+<span class="line"><span class="token keyword">const</span> merchantNo <span class="token operator">=</span> <span class="token string">'123456'</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token keyword">const</span> secretKey <span class="token operator">=</span> <span class="token string">'your_secret_key_here'</span><span class="token punctuation">;</span></span>
-<span class="line"><span class="token keyword">const</span> method <span class="token operator">=</span> <span class="token string">'POST'</span><span class="token punctuation">;</span></span>
-<span class="line"><span class="token keyword">const</span> path <span class="token operator">=</span> <span class="token string">'/admin-api/bank/open/virtual-account/create'</span><span class="token punctuation">;</span></span>
-<span class="line"><span class="token keyword">const</span> timestamp <span class="token operator">=</span> Math<span class="token punctuation">.</span><span class="token function">floor</span><span class="token punctuation">(</span>Date<span class="token punctuation">.</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
-<span class="line"><span class="token keyword">const</span> body <span class="token operator">=</span> <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">stringify</span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token literal-property property">type</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token literal-property property">amount</span><span class="token operator">:</span> <span class="token number">1000</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">const</span> baseUrl <span class="token operator">=</span> <span class="token string">'https://api.example.com'</span><span class="token punctuation">;</span></span>
 <span class="line"></span>
-<span class="line"><span class="token keyword">const</span> signature <span class="token operator">=</span> <span class="token function">signRequest</span><span class="token punctuation">(</span>secretKey<span class="token punctuation">,</span> method<span class="token punctuation">,</span> path<span class="token punctuation">,</span> timestamp<span class="token punctuation">,</span> body<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">(</span><span class="token keyword">async</span> <span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=></span> <span class="token punctuation">{</span></span>
+<span class="line">    <span class="token comment">// Echo: POST /open-api/demo/echo</span></span>
+<span class="line">    <span class="token keyword">const</span> echoPath <span class="token operator">=</span> <span class="token string">'/open-api/demo/echo'</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">const</span> echoMethod <span class="token operator">=</span> <span class="token string">'POST'</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">const</span> echoBody <span class="token operator">=</span> <span class="token constant">JSON</span><span class="token punctuation">.</span><span class="token function">stringify</span><span class="token punctuation">(</span><span class="token punctuation">{</span> <span class="token literal-property property">foo</span><span class="token operator">:</span> <span class="token string">'bar'</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">const</span> echoTimestamp <span class="token operator">=</span> Math<span class="token punctuation">.</span><span class="token function">floor</span><span class="token punctuation">(</span>Date<span class="token punctuation">.</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">const</span> echoSignature <span class="token operator">=</span> <span class="token function">signRequest</span><span class="token punctuation">(</span>secretKey<span class="token punctuation">,</span> echoMethod<span class="token punctuation">,</span> echoPath<span class="token punctuation">,</span> echoTimestamp<span class="token punctuation">,</span> echoBody<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"></span>
-<span class="line">axios<span class="token punctuation">.</span><span class="token function">post</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">https://api.example.com</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>path<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> body<span class="token punctuation">,</span> <span class="token punctuation">{</span></span>
-<span class="line">    <span class="token literal-property property">headers</span><span class="token operator">:</span> <span class="token punctuation">{</span></span>
-<span class="line">        <span class="token string-property property">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span><span class="token punctuation">,</span></span>
-<span class="line">        <span class="token string-property property">'X-Api-Key'</span><span class="token operator">:</span> secretKey<span class="token punctuation">,</span></span>
-<span class="line">        <span class="token string-property property">'X-Api-Timestamp'</span><span class="token operator">:</span> timestamp<span class="token punctuation">,</span></span>
-<span class="line">        <span class="token string-property property">'X-Api-Signature'</span><span class="token operator">:</span> signature<span class="token punctuation">,</span></span>
-<span class="line">    <span class="token punctuation">}</span></span>
-<span class="line"><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">then</span><span class="token punctuation">(</span><span class="token parameter">res</span> <span class="token operator">=></span> console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>res<span class="token punctuation">.</span>data<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">const</span> echoResp <span class="token operator">=</span> <span class="token keyword">await</span> axios<span class="token punctuation">.</span><span class="token function">post</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>baseUrl<span class="token interpolation-punctuation punctuation">}</span></span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>echoPath<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> echoBody<span class="token punctuation">,</span> <span class="token punctuation">{</span></span>
+<span class="line">        <span class="token literal-property property">headers</span><span class="token operator">:</span> <span class="token punctuation">{</span></span>
+<span class="line">            <span class="token string-property property">'Content-Type'</span><span class="token operator">:</span> <span class="token string">'application/json'</span><span class="token punctuation">,</span></span>
+<span class="line">            <span class="token string-property property">'X-Api-MerchantNo'</span><span class="token operator">:</span> merchantNo<span class="token punctuation">,</span></span>
+<span class="line">            <span class="token string-property property">'X-Api-Timestamp'</span><span class="token operator">:</span> echoTimestamp<span class="token punctuation">,</span></span>
+<span class="line">            <span class="token string-property property">'X-Api-Signature'</span><span class="token operator">:</span> echoSignature<span class="token punctuation">,</span></span>
+<span class="line">        <span class="token punctuation">}</span></span>
+<span class="line">    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>echoResp<span class="token punctuation">.</span>data<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">    <span class="token comment">// Ping: GET /open-api/demo/ping</span></span>
+<span class="line">    <span class="token keyword">const</span> pingPath <span class="token operator">=</span> <span class="token string">'/open-api/demo/ping'</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">const</span> pingMethod <span class="token operator">=</span> <span class="token string">'GET'</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">const</span> pingTimestamp <span class="token operator">=</span> Math<span class="token punctuation">.</span><span class="token function">floor</span><span class="token punctuation">(</span>Date<span class="token punctuation">.</span><span class="token function">now</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    <span class="token keyword">const</span> pingSignature <span class="token operator">=</span> <span class="token function">signRequest</span><span class="token punctuation">(</span>secretKey<span class="token punctuation">,</span> pingMethod<span class="token punctuation">,</span> pingPath<span class="token punctuation">,</span> pingTimestamp<span class="token punctuation">,</span> <span class="token string">''</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line">    <span class="token keyword">const</span> pingResp <span class="token operator">=</span> <span class="token keyword">await</span> axios<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>baseUrl<span class="token interpolation-punctuation punctuation">}</span></span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${</span>pingPath<span class="token interpolation-punctuation punctuation">}</span></span><span class="token template-punctuation string">`</span></span><span class="token punctuation">,</span> <span class="token punctuation">{</span></span>
+<span class="line">        <span class="token literal-property property">headers</span><span class="token operator">:</span> <span class="token punctuation">{</span></span>
+<span class="line">            <span class="token string-property property">'X-Api-MerchantNo'</span><span class="token operator">:</span> merchantNo<span class="token punctuation">,</span></span>
+<span class="line">            <span class="token string-property property">'X-Api-Timestamp'</span><span class="token operator">:</span> pingTimestamp<span class="token punctuation">,</span></span>
+<span class="line">            <span class="token string-property property">'X-Api-Signature'</span><span class="token operator">:</span> pingSignature<span class="token punctuation">,</span></span>
+<span class="line">        <span class="token punctuation">}</span></span>
+<span class="line">    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line">    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>pingResp<span class="token punctuation">.</span>data<span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="php" tabindex="-1"><a class="header-anchor" href="#php"><span>PHP</span></a></h4>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="php" tabindex="-1"><a class="header-anchor" href="#php"><span>PHP</span></a></h4>
 <div class="language-php line-numbers-mode" data-highlighter="prismjs" data-ext="php"><pre v-pre><code><span class="line"><span class="token php language-php"><span class="token delimiter important">&lt;?php</span></span>
 <span class="line"><span class="token keyword">function</span> <span class="token function-definition function">signRequest</span><span class="token punctuation">(</span><span class="token keyword type-hint">string</span> <span class="token variable">$secretKey</span><span class="token punctuation">,</span> <span class="token keyword type-hint">string</span> <span class="token variable">$method</span><span class="token punctuation">,</span> <span class="token keyword type-hint">string</span> <span class="token variable">$path</span><span class="token punctuation">,</span></span>
 <span class="line">                     <span class="token keyword type-hint">string</span> <span class="token variable">$timestamp</span><span class="token punctuation">,</span> <span class="token keyword type-hint">string</span> <span class="token variable">$body</span> <span class="token operator">=</span> <span class="token string single-quoted-string">''</span><span class="token punctuation">)</span><span class="token punctuation">:</span> <span class="token keyword return-type">string</span> <span class="token punctuation">{</span></span>
@@ -243,32 +341,150 @@
 <span class="line">    <span class="token keyword">return</span> <span class="token function">hash_hmac</span><span class="token punctuation">(</span><span class="token string single-quoted-string">'sha256'</span><span class="token punctuation">,</span> <span class="token variable">$stringToSign</span><span class="token punctuation">,</span> <span class="token variable">$secretKey</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span>
-<span class="line"><span class="token comment">// Usage example</span></span>
+<span class="line"><span class="token comment">// Usage example (Echo &amp; Ping)</span></span>
+<span class="line"><span class="token variable">$merchantNo</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'123456'</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token variable">$secretKey</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'your_secret_key_here'</span><span class="token punctuation">;</span></span>
-<span class="line"><span class="token variable">$method</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'POST'</span><span class="token punctuation">;</span></span>
-<span class="line"><span class="token variable">$path</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'/admin-api/bank/open/virtual-account/create'</span><span class="token punctuation">;</span></span>
-<span class="line"><span class="token variable">$timestamp</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword type-casting">string</span><span class="token punctuation">)</span><span class="token function">time</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
-<span class="line"><span class="token variable">$body</span> <span class="token operator">=</span> <span class="token function">json_encode</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string single-quoted-string">'type'</span> <span class="token operator">=></span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string single-quoted-string">'amount'</span> <span class="token operator">=></span> <span class="token number">1000</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token variable">$baseUrl</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'https://api.example.com'</span><span class="token punctuation">;</span></span>
 <span class="line"></span>
-<span class="line"><span class="token variable">$signature</span> <span class="token operator">=</span> <span class="token function">signRequest</span><span class="token punctuation">(</span><span class="token variable">$secretKey</span><span class="token punctuation">,</span> <span class="token variable">$method</span><span class="token punctuation">,</span> <span class="token variable">$path</span><span class="token punctuation">,</span> <span class="token variable">$timestamp</span><span class="token punctuation">,</span> <span class="token variable">$body</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token comment">// Echo: POST /open-api/demo/echo</span></span>
+<span class="line"><span class="token variable">$echoPath</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'/open-api/demo/echo'</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token variable">$echoMethod</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'POST'</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token variable">$echoBody</span> <span class="token operator">=</span> <span class="token function">json_encode</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token string single-quoted-string">'foo'</span> <span class="token operator">=></span> <span class="token string single-quoted-string">'bar'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token variable">$echoTimestamp</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword type-casting">string</span><span class="token punctuation">)</span><span class="token function">time</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token variable">$echoSignature</span> <span class="token operator">=</span> <span class="token function">signRequest</span><span class="token punctuation">(</span><span class="token variable">$secretKey</span><span class="token punctuation">,</span> <span class="token variable">$echoMethod</span><span class="token punctuation">,</span> <span class="token variable">$echoPath</span><span class="token punctuation">,</span> <span class="token variable">$echoTimestamp</span><span class="token punctuation">,</span> <span class="token variable">$echoBody</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"></span>
-<span class="line"><span class="token variable">$ch</span> <span class="token operator">=</span> <span class="token function">curl_init</span><span class="token punctuation">(</span><span class="token string double-quoted-string">"https://api.example.com<span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$path</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token variable">$ch</span> <span class="token operator">=</span> <span class="token function">curl_init</span><span class="token punctuation">(</span><span class="token string double-quoted-string">"<span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$baseUrl</span><span class="token punctuation">}</span></span><span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$echoPath</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token function">curl_setopt_array</span><span class="token punctuation">(</span><span class="token variable">$ch</span><span class="token punctuation">,</span> <span class="token punctuation">[</span></span>
 <span class="line">    <span class="token constant">CURLOPT_POST</span> <span class="token operator">=></span> <span class="token constant boolean">true</span><span class="token punctuation">,</span></span>
-<span class="line">    <span class="token constant">CURLOPT_POSTFIELDS</span> <span class="token operator">=></span> <span class="token variable">$body</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token constant">CURLOPT_POSTFIELDS</span> <span class="token operator">=></span> <span class="token variable">$echoBody</span><span class="token punctuation">,</span></span>
 <span class="line">    <span class="token constant">CURLOPT_RETURNTRANSFER</span> <span class="token operator">=></span> <span class="token constant boolean">true</span><span class="token punctuation">,</span></span>
 <span class="line">    <span class="token constant">CURLOPT_HTTPHEADER</span> <span class="token operator">=></span> <span class="token punctuation">[</span></span>
 <span class="line">        <span class="token string single-quoted-string">'Content-Type: application/json'</span><span class="token punctuation">,</span></span>
-<span class="line">        <span class="token string double-quoted-string">"X-Api-Key: <span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$secretKey</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">,</span></span>
-<span class="line">        <span class="token string double-quoted-string">"X-Api-Timestamp: <span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$timestamp</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">,</span></span>
-<span class="line">        <span class="token string double-quoted-string">"X-Api-Signature: <span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$signature</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">,</span></span>
+<span class="line">        <span class="token string double-quoted-string">"X-Api-MerchantNo: <span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$merchantNo</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">,</span></span>
+<span class="line">        <span class="token string double-quoted-string">"X-Api-Timestamp: <span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$echoTimestamp</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">,</span></span>
+<span class="line">        <span class="token string double-quoted-string">"X-Api-Signature: <span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$echoSignature</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">,</span></span>
 <span class="line">    <span class="token punctuation">]</span><span class="token punctuation">,</span></span>
 <span class="line"><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
-<span class="line"><span class="token variable">$response</span> <span class="token operator">=</span> <span class="token function">curl_exec</span><span class="token punctuation">(</span><span class="token variable">$ch</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token variable">$echoResp</span> <span class="token operator">=</span> <span class="token function">curl_exec</span><span class="token punctuation">(</span><span class="token variable">$ch</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
 <span class="line"><span class="token function">curl_close</span><span class="token punctuation">(</span><span class="token variable">$ch</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
-<span class="line"><span class="token keyword">echo</span> <span class="token variable">$response</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">echo</span> <span class="token variable">$echoResp</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token comment">// Ping: GET /open-api/demo/ping</span></span>
+<span class="line"><span class="token variable">$pingPath</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'/open-api/demo/ping'</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token variable">$pingMethod</span> <span class="token operator">=</span> <span class="token string single-quoted-string">'GET'</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token variable">$pingTimestamp</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword type-casting">string</span><span class="token punctuation">)</span><span class="token function">time</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token variable">$pingSignature</span> <span class="token operator">=</span> <span class="token function">signRequest</span><span class="token punctuation">(</span><span class="token variable">$secretKey</span><span class="token punctuation">,</span> <span class="token variable">$pingMethod</span><span class="token punctuation">,</span> <span class="token variable">$pingPath</span><span class="token punctuation">,</span> <span class="token variable">$pingTimestamp</span><span class="token punctuation">,</span> <span class="token string single-quoted-string">''</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"></span>
+<span class="line"><span class="token variable">$ch</span> <span class="token operator">=</span> <span class="token function">curl_init</span><span class="token punctuation">(</span><span class="token string double-quoted-string">"<span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$baseUrl</span><span class="token punctuation">}</span></span><span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$pingPath</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token function">curl_setopt_array</span><span class="token punctuation">(</span><span class="token variable">$ch</span><span class="token punctuation">,</span> <span class="token punctuation">[</span></span>
+<span class="line">    <span class="token constant">CURLOPT_HTTPGET</span> <span class="token operator">=></span> <span class="token constant boolean">true</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token constant">CURLOPT_RETURNTRANSFER</span> <span class="token operator">=></span> <span class="token constant boolean">true</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token constant">CURLOPT_HTTPHEADER</span> <span class="token operator">=></span> <span class="token punctuation">[</span></span>
+<span class="line">        <span class="token string double-quoted-string">"X-Api-MerchantNo: <span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$merchantNo</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">,</span></span>
+<span class="line">        <span class="token string double-quoted-string">"X-Api-Timestamp: <span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$pingTimestamp</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">,</span></span>
+<span class="line">        <span class="token string double-quoted-string">"X-Api-Signature: <span class="token interpolation"><span class="token punctuation">{</span><span class="token variable">$pingSignature</span><span class="token punctuation">}</span></span>"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token punctuation">]</span><span class="token punctuation">,</span></span>
+<span class="line"><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token variable">$pingResp</span> <span class="token operator">=</span> <span class="token function">curl_exec</span><span class="token punctuation">(</span><span class="token variable">$ch</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token function">curl_close</span><span class="token punctuation">(</span><span class="token variable">$ch</span><span class="token punctuation">)</span><span class="token punctuation">;</span></span>
+<span class="line"><span class="token keyword">echo</span> <span class="token variable">$pingResp</span><span class="token punctuation">;</span></span>
 <span class="line"></span></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><hr>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="go" tabindex="-1"><a class="header-anchor" href="#go"><span>Go</span></a></h4>
+<div class="language-go line-numbers-mode" data-highlighter="prismjs" data-ext="go"><pre v-pre><code><span class="line"><span class="token keyword">package</span> main</span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">import</span> <span class="token punctuation">(</span></span>
+<span class="line">	<span class="token string">"crypto/hmac"</span></span>
+<span class="line">	<span class="token string">"crypto/sha256"</span></span>
+<span class="line">	<span class="token string">"encoding/hex"</span></span>
+<span class="line">	<span class="token string">"fmt"</span></span>
+<span class="line">	<span class="token string">"io"</span></span>
+<span class="line">	<span class="token string">"net/http"</span></span>
+<span class="line">	<span class="token string">"net/url"</span></span>
+<span class="line">	<span class="token string">"strconv"</span></span>
+<span class="line">	<span class="token string">"strings"</span></span>
+<span class="line">	<span class="token string">"time"</span></span>
+<span class="line"><span class="token punctuation">)</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">func</span> <span class="token function">signRequest</span><span class="token punctuation">(</span>secretKey<span class="token punctuation">,</span> method<span class="token punctuation">,</span> requestURI<span class="token punctuation">,</span> timestamp<span class="token punctuation">,</span> body <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token builtin">string</span> <span class="token punctuation">{</span></span>
+<span class="line">	stringToSign <span class="token operator">:=</span> method <span class="token operator">+</span> <span class="token string">"\n"</span> <span class="token operator">+</span> requestURI <span class="token operator">+</span> <span class="token string">"\n"</span> <span class="token operator">+</span> timestamp <span class="token operator">+</span> <span class="token string">"\n"</span> <span class="token operator">+</span> body</span>
+<span class="line">	mac <span class="token operator">:=</span> hmac<span class="token punctuation">.</span><span class="token function">New</span><span class="token punctuation">(</span>sha256<span class="token punctuation">.</span>New<span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token function">byte</span><span class="token punctuation">(</span>secretKey<span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line">	<span class="token boolean">_</span><span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">=</span> mac<span class="token punctuation">.</span><span class="token function">Write</span><span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token function">byte</span><span class="token punctuation">(</span>stringToSign<span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line">	<span class="token keyword">return</span> hex<span class="token punctuation">.</span><span class="token function">EncodeToString</span><span class="token punctuation">(</span>mac<span class="token punctuation">.</span><span class="token function">Sum</span><span class="token punctuation">(</span><span class="token boolean">nil</span><span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">func</span> <span class="token function">doEcho</span><span class="token punctuation">(</span>baseURL<span class="token punctuation">,</span> merchantNo<span class="token punctuation">,</span> secretKey <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span></span>
+<span class="line">	method <span class="token operator">:=</span> <span class="token string">"POST"</span></span>
+<span class="line">	localPath <span class="token operator">:=</span> <span class="token string">"/open-api/demo/echo"</span></span>
+<span class="line">	body <span class="token operator">:=</span> <span class="token string">`{"foo":"bar"}`</span></span>
+<span class="line">	timestamp <span class="token operator">:=</span> strconv<span class="token punctuation">.</span><span class="token function">FormatInt</span><span class="token punctuation">(</span>time<span class="token punctuation">.</span><span class="token function">Now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Unix</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span></span>
+<span class="line">	fullURL <span class="token operator">:=</span> baseURL <span class="token operator">+</span> localPath</span>
+<span class="line">	u<span class="token punctuation">,</span> err <span class="token operator">:=</span> url<span class="token punctuation">.</span><span class="token function">Parse</span><span class="token punctuation">(</span>fullURL<span class="token punctuation">)</span></span>
+<span class="line">	<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span></span>
+<span class="line">		<span class="token keyword">return</span> err</span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line">	requestURI <span class="token operator">:=</span> u<span class="token punctuation">.</span><span class="token function">EscapedPath</span><span class="token punctuation">(</span><span class="token punctuation">)</span></span>
+<span class="line">	signature <span class="token operator">:=</span> <span class="token function">signRequest</span><span class="token punctuation">(</span>secretKey<span class="token punctuation">,</span> method<span class="token punctuation">,</span> requestURI<span class="token punctuation">,</span> timestamp<span class="token punctuation">,</span> body<span class="token punctuation">)</span></span>
+<span class="line"></span>
+<span class="line">	req<span class="token punctuation">,</span> err <span class="token operator">:=</span> http<span class="token punctuation">.</span><span class="token function">NewRequest</span><span class="token punctuation">(</span>method<span class="token punctuation">,</span> fullURL<span class="token punctuation">,</span> strings<span class="token punctuation">.</span><span class="token function">NewReader</span><span class="token punctuation">(</span>body<span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line">	<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span></span>
+<span class="line">		<span class="token keyword">return</span> err</span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line">	req<span class="token punctuation">.</span>Header<span class="token punctuation">.</span><span class="token function">Set</span><span class="token punctuation">(</span><span class="token string">"Content-Type"</span><span class="token punctuation">,</span> <span class="token string">"application/json"</span><span class="token punctuation">)</span></span>
+<span class="line">	req<span class="token punctuation">.</span>Header<span class="token punctuation">.</span><span class="token function">Set</span><span class="token punctuation">(</span><span class="token string">"X-Api-MerchantNo"</span><span class="token punctuation">,</span> merchantNo<span class="token punctuation">)</span></span>
+<span class="line">	req<span class="token punctuation">.</span>Header<span class="token punctuation">.</span><span class="token function">Set</span><span class="token punctuation">(</span><span class="token string">"X-Api-Timestamp"</span><span class="token punctuation">,</span> timestamp<span class="token punctuation">)</span></span>
+<span class="line">	req<span class="token punctuation">.</span>Header<span class="token punctuation">.</span><span class="token function">Set</span><span class="token punctuation">(</span><span class="token string">"X-Api-Signature"</span><span class="token punctuation">,</span> signature<span class="token punctuation">)</span></span>
+<span class="line"></span>
+<span class="line">	resp<span class="token punctuation">,</span> err <span class="token operator">:=</span> http<span class="token punctuation">.</span>DefaultClient<span class="token punctuation">.</span><span class="token function">Do</span><span class="token punctuation">(</span>req<span class="token punctuation">)</span></span>
+<span class="line">	<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span></span>
+<span class="line">		<span class="token keyword">return</span> err</span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line">	<span class="token keyword">defer</span> resp<span class="token punctuation">.</span>Body<span class="token punctuation">.</span><span class="token function">Close</span><span class="token punctuation">(</span><span class="token punctuation">)</span></span>
+<span class="line">	b<span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">:=</span> io<span class="token punctuation">.</span><span class="token function">ReadAll</span><span class="token punctuation">(</span>resp<span class="token punctuation">.</span>Body<span class="token punctuation">)</span></span>
+<span class="line">	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token function">string</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line">	<span class="token keyword">return</span> <span class="token boolean">nil</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">func</span> <span class="token function">doPing</span><span class="token punctuation">(</span>baseURL<span class="token punctuation">,</span> merchantNo<span class="token punctuation">,</span> secretKey <span class="token builtin">string</span><span class="token punctuation">)</span> <span class="token builtin">error</span> <span class="token punctuation">{</span></span>
+<span class="line">	method <span class="token operator">:=</span> <span class="token string">"GET"</span></span>
+<span class="line">	localPath <span class="token operator">:=</span> <span class="token string">"/open-api/demo/ping"</span></span>
+<span class="line">	body <span class="token operator">:=</span> <span class="token string">""</span></span>
+<span class="line">	timestamp <span class="token operator">:=</span> strconv<span class="token punctuation">.</span><span class="token function">FormatInt</span><span class="token punctuation">(</span>time<span class="token punctuation">.</span><span class="token function">Now</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Unix</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span></span>
+<span class="line">	fullURL <span class="token operator">:=</span> baseURL <span class="token operator">+</span> localPath</span>
+<span class="line">	u<span class="token punctuation">,</span> err <span class="token operator">:=</span> url<span class="token punctuation">.</span><span class="token function">Parse</span><span class="token punctuation">(</span>fullURL<span class="token punctuation">)</span></span>
+<span class="line">	<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span></span>
+<span class="line">		<span class="token keyword">return</span> err</span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line">	requestURI <span class="token operator">:=</span> u<span class="token punctuation">.</span><span class="token function">EscapedPath</span><span class="token punctuation">(</span><span class="token punctuation">)</span></span>
+<span class="line">	signature <span class="token operator">:=</span> <span class="token function">signRequest</span><span class="token punctuation">(</span>secretKey<span class="token punctuation">,</span> method<span class="token punctuation">,</span> requestURI<span class="token punctuation">,</span> timestamp<span class="token punctuation">,</span> body<span class="token punctuation">)</span></span>
+<span class="line"></span>
+<span class="line">	req<span class="token punctuation">,</span> err <span class="token operator">:=</span> http<span class="token punctuation">.</span><span class="token function">NewRequest</span><span class="token punctuation">(</span>method<span class="token punctuation">,</span> fullURL<span class="token punctuation">,</span> <span class="token boolean">nil</span><span class="token punctuation">)</span></span>
+<span class="line">	<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span></span>
+<span class="line">		<span class="token keyword">return</span> err</span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line">	req<span class="token punctuation">.</span>Header<span class="token punctuation">.</span><span class="token function">Set</span><span class="token punctuation">(</span><span class="token string">"X-Api-MerchantNo"</span><span class="token punctuation">,</span> merchantNo<span class="token punctuation">)</span></span>
+<span class="line">	req<span class="token punctuation">.</span>Header<span class="token punctuation">.</span><span class="token function">Set</span><span class="token punctuation">(</span><span class="token string">"X-Api-Timestamp"</span><span class="token punctuation">,</span> timestamp<span class="token punctuation">)</span></span>
+<span class="line">	req<span class="token punctuation">.</span>Header<span class="token punctuation">.</span><span class="token function">Set</span><span class="token punctuation">(</span><span class="token string">"X-Api-Signature"</span><span class="token punctuation">,</span> signature<span class="token punctuation">)</span></span>
+<span class="line"></span>
+<span class="line">	resp<span class="token punctuation">,</span> err <span class="token operator">:=</span> http<span class="token punctuation">.</span>DefaultClient<span class="token punctuation">.</span><span class="token function">Do</span><span class="token punctuation">(</span>req<span class="token punctuation">)</span></span>
+<span class="line">	<span class="token keyword">if</span> err <span class="token operator">!=</span> <span class="token boolean">nil</span> <span class="token punctuation">{</span></span>
+<span class="line">		<span class="token keyword">return</span> err</span>
+<span class="line">	<span class="token punctuation">}</span></span>
+<span class="line">	<span class="token keyword">defer</span> resp<span class="token punctuation">.</span>Body<span class="token punctuation">.</span><span class="token function">Close</span><span class="token punctuation">(</span><span class="token punctuation">)</span></span>
+<span class="line">	b<span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">:=</span> io<span class="token punctuation">.</span><span class="token function">ReadAll</span><span class="token punctuation">(</span>resp<span class="token punctuation">.</span>Body<span class="token punctuation">)</span></span>
+<span class="line">	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token function">string</span><span class="token punctuation">(</span>b<span class="token punctuation">)</span><span class="token punctuation">)</span></span>
+<span class="line">	<span class="token keyword">return</span> <span class="token boolean">nil</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span>
+<span class="line"><span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{</span></span>
+<span class="line">	baseURL <span class="token operator">:=</span> <span class="token string">"https://api.example.com"</span></span>
+<span class="line">	merchantNo <span class="token operator">:=</span> <span class="token string">"123456"</span></span>
+<span class="line">	secretKey <span class="token operator">:=</span> <span class="token string">"your_secret_key_here"</span></span>
+<span class="line"></span>
+<span class="line">	<span class="token boolean">_</span> <span class="token operator">=</span> <span class="token function">doEcho</span><span class="token punctuation">(</span>baseURL<span class="token punctuation">,</span> merchantNo<span class="token punctuation">,</span> secretKey<span class="token punctuation">)</span></span>
+<span class="line">	<span class="token boolean">_</span> <span class="token operator">=</span> <span class="token function">doPing</span><span class="token punctuation">(</span>baseURL<span class="token punctuation">,</span> merchantNo<span class="token punctuation">,</span> secretKey<span class="token punctuation">)</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><hr>
 <h2 id="_3-api-response-format" tabindex="-1"><a class="header-anchor" href="#_3-api-response-format"><span>3. API Response Format</span></a></h2>
 <p>All API endpoints return a unified JSON format:</p>
 <div class="language-json line-numbers-mode" data-highlighter="prismjs" data-ext="json"><pre v-pre><code><span class="line"><span class="token punctuation">{</span></span>
@@ -318,7 +534,7 @@
 </tr>
 <tr>
 <td>1009001003</td>
-<td>Invalid API Key</td>
+<td>Invalid merchant number or merchant not found</td>
 </tr>
 <tr>
 <td>1009001004</td>
@@ -525,21 +741,20 @@
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span></span></code></pre>
 <div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><hr>
-<h2 id="_5-event-types" tabindex="-1"><a class="header-anchor" href="#_5-event-types"><span>5. Event Types</span></a></h2>
-<h3 id="_5-1-deposit-completed-deposit-completed" tabindex="-1"><a class="header-anchor" href="#_5-1-deposit-completed-deposit-completed"><span>5.1 deposit.completed - Deposit Completed</span></a></h3>
-<p>Triggered when a virtual account receives a deposit.</p>
-<p><strong>Payload Example:</strong></p>
+<h2 id="_5-event-types" tabindex="-1"><a class="header-anchor" href="#_5-event-types"><span>5.  Event Types</span></a></h2>
+<h3 id="_5-1-order-completed-order-completed" tabindex="-1"><a class="header-anchor" href="#_5-1-order-completed-order-completed"><span>5.1 order.completed - Order Completed</span></a></h3>
+<p>Triggered after an order receives payment.</p>
+<p><strong>Payload Example：</strong></p>
 <div class="language-json line-numbers-mode" data-highlighter="prismjs" data-ext="json"><pre v-pre><code><span class="line"><span class="token punctuation">{</span></span>
-<span class="line">    <span class="token property">"accountNo"</span><span class="token operator">:</span> <span class="token string">"1234567890123456"</span><span class="token punctuation">,</span></span>
-<span class="line">    <span class="token property">"amount"</span><span class="token operator">:</span> <span class="token string">"50000"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"orderNo"</span><span class="token operator">:</span> <span class="token string">"1234567890123456"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"receiptAmount"</span><span class="token operator">:</span> <span class="token string">"50000"</span><span class="token punctuation">,</span></span>
 <span class="line">    <span class="token property">"currency"</span><span class="token operator">:</span> <span class="token string">"TWD"</span><span class="token punctuation">,</span></span>
-<span class="line">    <span class="token property">"transactionDate"</span><span class="token operator">:</span> <span class="token string">"20250225"</span><span class="token punctuation">,</span></span>
-<span class="line">    <span class="token property">"transactionTime"</span><span class="token operator">:</span> <span class="token string">"143052"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"gmtPayment"</span><span class="token operator">:</span> <span class="token string">"20260225143052"</span><span class="token punctuation">,</span></span>
 <span class="line">    <span class="token property">"type"</span><span class="token operator">:</span> <span class="token string">"C"</span><span class="token punctuation">,</span></span>
-<span class="line">    <span class="token property">"seqNo"</span><span class="token operator">:</span> <span class="token string">"20250225001"</span></span>
+<span class="line">    <span class="token property">"tradeStatus"</span><span class="token operator">:</span> <span class="token string">"WAIT_BUYER_PAY"</span></span>
 <span class="line"><span class="token punctuation">}</span></span>
 <span class="line"></span></code></pre>
-<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><table>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><table>
 <thead>
 <tr>
 <th>Field</th>
@@ -549,43 +764,38 @@
 </thead>
 <tbody>
 <tr>
-<td>accountNo</td>
+<td>orderNo</td>
 <td>String</td>
-<td>Virtual account number</td>
+<td>Order Number</td>
 </tr>
 <tr>
-<td>amount</td>
+<td>receiptAmount</td>
 <td>String</td>
-<td>Deposit amount</td>
+<td>Actual Received Amount</td>
 </tr>
 <tr>
 <td>currency</td>
 <td>String</td>
-<td>Currency (default <code v-pre>TWD</code>, possible values: <code v-pre>TWD</code> / <code v-pre>USD</code>)</td>
+<td>Currency (Default: TWD; Possible Values: TWD / USD)</td>
 </tr>
 <tr>
-<td>transactionDate</td>
+<td>gmtPayment</td>
 <td>String</td>
-<td>Transaction date (yyyyMMdd)</td>
-</tr>
-<tr>
-<td>transactionTime</td>
-<td>String</td>
-<td>Transaction time (HHmmss)</td>
+<td>Payment Time</td>
 </tr>
 <tr>
 <td>type</td>
 <td>String</td>
-<td>Transaction type (see table below)</td>
+<td>Transaction Type (See description below)</td>
 </tr>
 <tr>
-<td>seqNo</td>
+<td>tradeStatus</td>
 <td>String</td>
-<td>Transaction sequence number</td>
+<td>Transaction Status</td>
 </tr>
 </tbody>
 </table>
-<p><strong>Transaction Type (type) Codes:</strong></p>
+<p><strong>Transaction Type (type) Code Description：</strong></p>
 <table>
 <thead>
 <tr>
@@ -596,23 +806,23 @@
 <tbody>
 <tr>
 <td>A</td>
-<td>Over-the-counter</td>
+<td>Counter</td>
 </tr>
 <tr>
 <td>B / P</td>
-<td>Voice banking</td>
+<td>Voice</td>
 </tr>
 <tr>
 <td>C</td>
-<td>Internet banking</td>
+<td>Online Banking</td>
 </tr>
 <tr>
 <td>D</td>
-<td>Mobile banking</td>
+<td>Mobile Banking</td>
 </tr>
 <tr>
 <td>E / R</td>
-<td>Wire transfer</td>
+<td>Remittance</td>
 </tr>
 <tr>
 <td>F</td>
@@ -640,16 +850,481 @@
 </tr>
 <tr>
 <td>0</td>
-<td>Other</td>
+<td>其他</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Transaction Status (tradeStatus) Code Description：</strong></p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WAIT_BUYER_PAY</td>
+<td>Pending Payment</td>
+</tr>
+<tr>
+<td>TRADE_SUCCESS</td>
+<td>Success</td>
+</tr>
+<tr>
+<td>TRADE_CLOSED</td>
+<td>Closed</td>
+</tr>
+<tr>
+<td>TRADE_FINISHED</td>
+<td>Finished</td>
+</tr>
+<tr>
+<td>TRADE_TIMEOUT</td>
+<td>Timeout</td>
+</tr>
+<tr>
+<td>TRADE_CLEAR</td>
+<td>Cleared</td>
+</tr>
+</tbody>
+</table>
+<h3 id="_5-2-order-clear-order-cancelled" tabindex="-1"><a class="header-anchor" href="#_5-2-order-clear-order-cancelled"><span>5.2 order.clear - Order Cancelled</span></a></h3>
+<p>Triggered after an order is cancelled.</p>
+<p><strong>Payload Example：</strong></p>
+<div class="language-json line-numbers-mode" data-highlighter="prismjs" data-ext="json"><pre v-pre><code><span class="line"><span class="token punctuation">{</span></span>
+<span class="line">    <span class="token property">"orderNo"</span><span class="token operator">:</span> <span class="token string">"1234567890123456"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"tradeStatus"</span><span class="token operator">:</span> <span class="token string">"WAIT_BUYER_PAY"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"timeoutType"</span><span class="token operator">:</span> <span class="token string">"USER_TIMEOUT"</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>orderNo</td>
+<td>String</td>
+<td>Order Number</td>
+</tr>
+<tr>
+<td>tradeStatus</td>
+<td>String</td>
+<td>Transaction Status</td>
+</tr>
+<tr>
+<td>timeoutType</td>
+<td>String</td>
+<td>Timeout Type</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Transaction Status (tradeStatus) Code Description：</strong></p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>WAIT_BUYER_PAY</td>
+<td>Pending Payment</td>
+</tr>
+<tr>
+<td>TRADE_SUCCESS</td>
+<td>Success</td>
+</tr>
+<tr>
+<td>TRADE_CLOSED</td>
+<td>Closed</td>
+</tr>
+<tr>
+<td>TRADE_FINISHED</td>
+<td>Finished</td>
+</tr>
+<tr>
+<td>TRADE_TIMEOUT</td>
+<td>Timeout</td>
+</tr>
+<tr>
+<td>TRADE_CLEAR</td>
+<td>Cleared</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Timeout Type (timeoutType) Code Description：</strong></p>
+<table>
+<thead>
+<tr>
+<th>Code</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SYSTEM_CLOSE</td>
+<td>System Close</td>
+</tr>
+<tr>
+<td>USER_TIMEOUT</td>
+<td>User Timeout</td>
 </tr>
 </tbody>
 </table>
 <hr>
-<h2 id="_6-faq" tabindex="-1"><a class="header-anchor" href="#_6-faq"><span>6. FAQ</span></a></h2>
+<h2 id="_6-payment-orders" tabindex="-1"><a class="header-anchor" href="#_6-payment-orders"><span>6. Payment Orders</span></a></h2>
+<h3 id="_6-1-create-payment-order" tabindex="-1"><a class="header-anchor" href="#_6-1-create-payment-order"><span>6.1. Create Payment Order</span></a></h3>
+<ul>
+<li><strong>API Endpoint</strong>：<code v-pre>POST /open-api/payment-order/create</code></li>
+<li><strong>API Description</strong>：Used by merchants to create new payment orders</li>
+<li><strong>Authentication Method</strong>：OpenAPI Authentication</li>
+</ul>
+<h4 id="request-parameters" tabindex="-1"><a class="header-anchor" href="#request-parameters"><span>Request Parameters</span></a></h4>
+<table>
+<thead>
+<tr>
+<th>Parameter Name</th>
+<th>Type</th>
+<th>Required</th>
+<th>Example Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>subject</td>
+<td>String</td>
+<td>Yes</td>
+<td>A</td>
+<td>Title</td>
+</tr>
+<tr>
+<td>transactionType</td>
+<td>Integer</td>
+<td>Yes</td>
+<td>1</td>
+<td>Order Transaction Type (1:Merit Goods, 2:Virtual Currency (Offline), 3:Virtual Currency P2P, 4:Mining Platform B2B Receipt, 5:Game Recharge Charge, 6:Retail Receipt)</td>
+</tr>
+<tr>
+<td>currency</td>
+<td>String</td>
+<td>Yes</td>
+<td>TWD</td>
+<td>Currency (TWD, USD)</td>
+</tr>
+<tr>
+<td>totalAmount</td>
+<td>BigDecimal</td>
+<td>Yes</td>
+<td>100.00</td>
+<td>Order Total Amount</td>
+</tr>
+<tr>
+<td>gmtCreate</td>
+<td>LocalDateTime</td>
+<td>Yes</td>
+<td>2023-01-01T10:00:00</td>
+<td>Transaction Creation Time</td>
+</tr>
+<tr>
+<td>timeExpire</td>
+<td>LocalDateTime</td>
+<td>Yes</td>
+<td>2023-01-02T10:00:00</td>
+<td>Order Timeout Time</td>
+</tr>
+<tr>
+<td>passbackParams</td>
+<td>String</td>
+<td>No</td>
+<td>param=value</td>
+<td>Public Backward Parameters</td>
+</tr>
+<tr>
+<td>merchantParams</td>
+<td>String</td>
+<td>No</td>
+<td>custom=data</td>
+<td>Merchant Parameters</td>
+</tr>
+</tbody>
+</table>
+<h4 id="request-example" tabindex="-1"><a class="header-anchor" href="#request-example"><span>Request Example</span></a></h4>
+<div class="language-json line-numbers-mode" data-highlighter="prismjs" data-ext="json"><pre v-pre><code><span class="line"><span class="token punctuation">{</span></span>
+<span class="line">  <span class="token property">"subject"</span><span class="token operator">:</span> <span class="token string">"A"</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"transactionType"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"currency"</span><span class="token operator">:</span> <span class="token string">"TWD"</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"totalAmount"</span><span class="token operator">:</span> <span class="token number">100.00</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"gmtCreate"</span><span class="token operator">:</span> <span class="token string">"2023-01-01T10:00:00"</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"timeExpire"</span><span class="token operator">:</span> <span class="token string">"2023-01-02T10:00:00"</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"passbackParams"</span><span class="token operator">:</span> <span class="token string">"param=value"</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"merchantParams"</span><span class="token operator">:</span> <span class="token string">"custom=data"</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h4 id="response-parameters" tabindex="-1"><a class="header-anchor" href="#response-parameters"><span>Response Parameters</span></a></h4>
+<table>
+<thead>
+<tr>
+<th>Parameter Name</th>
+<th>Type</th>
+<th>Example Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>id</td>
+<td>Long</td>
+<td>21380</td>
+<td>Primary Key</td>
+</tr>
+<tr>
+<td>orderNo</td>
+<td>String</td>
+<td>ORDER20230101001</td>
+<td>Order Number</td>
+</tr>
+<tr>
+<td>subject</td>
+<td>String</td>
+<td>A</td>
+<td>Title</td>
+</tr>
+<tr>
+<td>transactionType</td>
+<td>Integer</td>
+<td>1</td>
+<td>Order Transaction Type</td>
+</tr>
+<tr>
+<td>currency</td>
+<td>String</td>
+<td>TWD</td>
+<td>Currency</td>
+</tr>
+<tr>
+<td>totalAmount</td>
+<td>BigDecimal</td>
+<td>100.00</td>
+<td>Order Total Amount</td>
+</tr>
+<tr>
+<td>receiptAmount</td>
+<td>BigDecimal</td>
+<td>100.00</td>
+<td>Received Amount</td>
+</tr>
+<tr>
+<td>tradeStatus</td>
+<td>String</td>
+<td>WAIT_BUYER_PAY</td>
+<td>Transaction Status</td>
+</tr>
+<tr>
+<td>gmtCreate</td>
+<td>LocalDateTime</td>
+<td>2023-01-01T10:00:00</td>
+<td>Transaction Creation Time</td>
+</tr>
+<tr>
+<td>gmtPayment</td>
+<td>LocalDateTime</td>
+<td>null</td>
+<td>Payment Time</td>
+</tr>
+<tr>
+<td>timeExpire</td>
+<td>LocalDateTime</td>
+<td>2023-01-02T10:00:00</td>
+<td>Order Timeout Time</td>
+</tr>
+<tr>
+<td>timeoutType</td>
+<td>String</td>
+<td>null</td>
+<td>Timeout Type: SYSTEM_CLOSE（System Close）、USER_TIMEOUT（User Timeout）</td>
+</tr>
+<tr>
+<td>merchantId</td>
+<td>Long</td>
+<td>20116</td>
+<td>Merchant ID</td>
+</tr>
+<tr>
+<td>passbackParams</td>
+<td>String</td>
+<td>param=value</td>
+<td>Public Backward Parameters</td>
+</tr>
+<tr>
+<td>merchantParams</td>
+<td>String</td>
+<td>custom=data</td>
+<td>Merchant Parameters</td>
+</tr>
+<tr>
+<td>createTime</td>
+<td>LocalDateTime</td>
+<td>2023-01-01T10:00:00</td>
+<td>Creation Time</td>
+</tr>
+</tbody>
+</table>
+<h4 id="response-example" tabindex="-1"><a class="header-anchor" href="#response-example"><span>Response Example</span></a></h4>
+<div class="language-json line-numbers-mode" data-highlighter="prismjs" data-ext="json"><pre v-pre><code><span class="line"><span class="token punctuation">{</span></span>
+<span class="line">  <span class="token property">"code"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"success"</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span></span>
+<span class="line">    <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">21380</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"orderNo"</span><span class="token operator">:</span> <span class="token string">"ORDER20230101001"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"subject"</span><span class="token operator">:</span> <span class="token string">"购买商品A"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"transactionType"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"currency"</span><span class="token operator">:</span> <span class="token string">"TWD"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"totalAmount"</span><span class="token operator">:</span> <span class="token number">100.00</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"receiptAmount"</span><span class="token operator">:</span> <span class="token number">100.00</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"tradeStatus"</span><span class="token operator">:</span> <span class="token string">"WAIT_BUYER_PAY"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"gmtCreate"</span><span class="token operator">:</span> <span class="token string">"2023-01-01T10:00:00"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"gmtPayment"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"timeExpire"</span><span class="token operator">:</span> <span class="token string">"2023-01-02T10:00:00"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"timeoutType"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"merchantId"</span><span class="token operator">:</span> <span class="token number">20116</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"passbackParams"</span><span class="token operator">:</span> <span class="token string">"passbackParams"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"merchantParams"</span><span class="token operator">:</span> <span class="token string">"merchantParams"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"createTime"</span><span class="token operator">:</span> <span class="token string">"2023-01-01T10:00:00"</span></span>
+<span class="line">  <span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="_6-2-query-payment-order" tabindex="-1"><a class="header-anchor" href="#_6-2-query-payment-order"><span>6.2. Query Payment Order</span></a></h3>
+<ul>
+<li><strong>API Endpoint</strong>：<code v-pre>GET /open-api/payment-order/get</code></li>
+<li><strong>API Description</strong>：Query payment order details by order number</li>
+<li><strong>Authentication Method</strong>：OpenAPI Authentication</li>
+</ul>
+<h4 id="request-parameters-1" tabindex="-1"><a class="header-anchor" href="#request-parameters-1"><span>Request Parameters</span></a></h4>
+<table>
+<thead>
+<tr>
+<th>Parameter Name</th>
+<th>Type</th>
+<th>Required</th>
+<th>Example Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>orderNo</td>
+<td>String</td>
+<td>Yes</td>
+<td>ORDER20230101001</td>
+<td>Order Number</td>
+</tr>
+</tbody>
+</table>
+<h4 id="response-parameters-1" tabindex="-1"><a class="header-anchor" href="#response-parameters-1"><span>Response Parameters</span></a></h4>
+<p>Same as &quot;Create Payment Order&quot; interface response parameters.</p>
+<h4 id="response-example-1" tabindex="-1"><a class="header-anchor" href="#response-example-1"><span>Response Example</span></a></h4>
+<div class="language-json line-numbers-mode" data-highlighter="prismjs" data-ext="json"><pre v-pre><code><span class="line"><span class="token punctuation">{</span></span>
+<span class="line">  <span class="token property">"code"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"success"</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token punctuation">{</span></span>
+<span class="line">    <span class="token property">"id"</span><span class="token operator">:</span> <span class="token number">21380</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"orderNo"</span><span class="token operator">:</span> <span class="token string">"ORDER20230101001"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"subject"</span><span class="token operator">:</span> <span class="token string">"购买商品A"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"transactionType"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"currency"</span><span class="token operator">:</span> <span class="token string">"TWD"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"totalAmount"</span><span class="token operator">:</span> <span class="token number">100.00</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"receiptAmount"</span><span class="token operator">:</span> <span class="token number">100.00</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"tradeStatus"</span><span class="token operator">:</span> <span class="token string">"TRADE_SUCCESS"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"gmtCreate"</span><span class="token operator">:</span> <span class="token string">"2023-01-01T10:00:00"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"gmtPayment"</span><span class="token operator">:</span> <span class="token string">"2023-01-01T10:30:00"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"timeExpire"</span><span class="token operator">:</span> <span class="token string">"2023-01-02T10:00:00"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"timeoutType"</span><span class="token operator">:</span> <span class="token null keyword">null</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"merchantId"</span><span class="token operator">:</span> <span class="token number">20116</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"passbackParams"</span><span class="token operator">:</span> <span class="token string">"param=value"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"merchantParams"</span><span class="token operator">:</span> <span class="token string">"custom=data"</span><span class="token punctuation">,</span></span>
+<span class="line">    <span class="token property">"createTime"</span><span class="token operator">:</span> <span class="token string">"2023-01-01T10:00:00"</span></span>
+<span class="line">  <span class="token punctuation">}</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><h3 id="_6-3-cancel-payment-order" tabindex="-1"><a class="header-anchor" href="#_6-3-cancel-payment-order"><span>6.3. Cancel Payment Order</span></a></h3>
+<ul>
+<li><strong>API Endpoint</strong>：<code v-pre>POST /open-api/payment-order/clear</code></li>
+<li><strong>API Description</strong>：Cancel payment order by order number</li>
+<li><strong>Authentication Method</strong>：OpenAPI Authentication</li>
+</ul>
+<h4 id="request-parameters-2" tabindex="-1"><a class="header-anchor" href="#request-parameters-2"><span>Request Parameters</span></a></h4>
+<table>
+<thead>
+<tr>
+<th>Parameter Name</th>
+<th>Type</th>
+<th>Required</th>
+<th>Example Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>orderNo</td>
+<td>String</td>
+<td>Yes</td>
+<td>ORDER20230101001</td>
+<td>Order Number</td>
+</tr>
+</tbody>
+</table>
+<h4 id="response-parameters-2" tabindex="-1"><a class="header-anchor" href="#response-parameters-2"><span>Response Parameters</span></a></h4>
+<table>
+<thead>
+<tr>
+<th>Parameter Name</th>
+<th>Type</th>
+<th>Example Value</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>code</td>
+<td>Integer</td>
+<td>0</td>
+<td>Status Code</td>
+</tr>
+<tr>
+<td>message</td>
+<td>String</td>
+<td>success</td>
+<td>Message</td>
+</tr>
+<tr>
+<td>data</td>
+<td>Boolean</td>
+<td>true</td>
+<td>Whether Successful</td>
+</tr>
+</tbody>
+</table>
+<h4 id="response-example-2" tabindex="-1"><a class="header-anchor" href="#response-example-2"><span>Response Example</span></a></h4>
+<div class="language-json line-numbers-mode" data-highlighter="prismjs" data-ext="json"><pre v-pre><code><span class="line"><span class="token punctuation">{</span></span>
+<span class="line">  <span class="token property">"code"</span><span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"message"</span><span class="token operator">:</span> <span class="token string">"success"</span><span class="token punctuation">,</span></span>
+<span class="line">  <span class="token property">"data"</span><span class="token operator">:</span> <span class="token boolean">true</span></span>
+<span class="line"><span class="token punctuation">}</span></span>
+<span class="line"></span></code></pre>
+<div class="line-numbers" aria-hidden="true" style="counter-reset:line-number 0"><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div><div class="line-number"></div></div></div><hr>
+<h2 id="_7-faq" tabindex="-1"><a class="header-anchor" href="#_7-faq"><span>7. FAQ</span></a></h2>
 <h3 id="q-signature-verification-keeps-failing" tabindex="-1"><a class="header-anchor" href="#q-signature-verification-keeps-failing"><span>Q: Signature verification keeps failing?</span></a></h3>
 <p>Please check the following:</p>
 <ol>
-<li>Verify that your Secret Key is correct</li>
+<li>Verify that <code v-pre>X-Api-MerchantNo</code> is correct and that your Secret Key matches the one in the admin console and is only used for local signing</li>
 <li>Verify the concatenation order and newline characters in the string to sign</li>
 <li>Verify the timestamp is a <strong>second-level</strong> Unix timestamp, not milliseconds</li>
 <li>Verify the request body is the raw JSON string without additional formatting</li>

@@ -9,3 +9,20 @@ export const routes = Object.fromEntries([
   ["/zh-TW/open-api-guide.html", { loader: () => import(/* webpackChunkName: "zh-TW_open-api-guide.html" */"/Users/sunray/Documents/virtual-bank-doc/virtual-bank-doc/docs/.vuepress/.temp/pages/zh-TW/open-api-guide.html.js"), meta: {"title":"Open API 串接指南"} }],
   ["/404.html", { loader: () => import(/* webpackChunkName: "404.html" */"/Users/sunray/Documents/virtual-bank-doc/virtual-bank-doc/docs/.vuepress/.temp/pages/404.html.js"), meta: {"title":""} }],
 ]);
+
+if (import.meta.webpackHot) {
+  import.meta.webpackHot.accept()
+  if (__VUE_HMR_RUNTIME__.updateRoutes) {
+    __VUE_HMR_RUNTIME__.updateRoutes(routes)
+  }
+  if (__VUE_HMR_RUNTIME__.updateRedirects) {
+    __VUE_HMR_RUNTIME__.updateRedirects(redirects)
+  }
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept(({ routes, redirects }) => {
+    __VUE_HMR_RUNTIME__.updateRoutes(routes)
+    __VUE_HMR_RUNTIME__.updateRedirects(redirects)
+  })
+}
