@@ -764,16 +764,16 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 
 #### 请求参数
 
-| 参数名 | 类型 | 必填 | 示例值 | 描述 |
-|--------|------|------|--------|------|
-| subject | String | 是 | 购买商品A | 标题 |
-| transactionType | Integer | 是 | 1 | 订单交易类型(1:功德款,2:虛擬通貨（線下）,3:虛擬通貨P2P,4:算力平臺 B2B 收款,5:游戏充值收费,6:零售收款) |
-| currency | String | 是 | TWD | 币别(TWD, USD) |
-| totalAmount | BigDecimal | 是 | 100.00 | 订单总金额 |
-| gmtCreate | LocalDateTime | 是 | 2023-01-01T10:00:00 | 交易创建时间 |
-| timeExpire | LocalDateTime | 是 | 2023-01-02T10:00:00 | 订单超时时间 |
-| passbackParams | String | 否 | param=value | 公共回传参数 |
-| merchantParams | String | 否 | custom=data | 商户传入参数 |
+| 参数名 | 类型            | 必填 | 示例值 | 描述                                                               |
+|--------|---------------|------|--------|------------------------------------------------------------------|
+| subject | String        | 是 | 购买商品A | 标题                                                               |
+| transactionType | Integer       | 是 | 1 | 订单交易类型(1:功德款,2:虛擬通貨（線下）,3:虛擬通貨P2P,4:算力平臺 B2B 收款,5:游戏充值收费,6:零售收款) |
+| currency | String        | 是 | TWD | 币别(TWD, USD)                                                     |
+| totalAmount | BigDecimal    | 是 | 100.00 | 订单总金额                                                            |
+| gmtCreate | Long          | 是 | 1775648497229 | 交易创建时间戳                                                          |
+| timeExpire | Long | 是 | 1775648497229 | 订单超时时间戳                                                           |
+| passbackParams | String        | 否 | param=value | 公共回传参数                                                           |
+| merchantParams | String        | 否 | custom=data | 商户传入参数                                                           |
 
 #### 请求示例
 
@@ -783,8 +783,8 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
   "transactionType": 1,
   "currency": "TWD",
   "totalAmount": 100.00,
-  "gmtCreate": "2023-01-01T10:00:00",
-  "timeExpire": "2023-01-02T10:00:00",
+  "gmtCreate": "1775648408222",
+  "timeExpire": "1775648408222",
   "passbackParams": "param=value",
   "merchantParams": "custom=data"
 }
@@ -792,24 +792,24 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 
 #### 响应参数
 
-| 参数名 | 类型 | 示例值 | 描述 |
-|--------|------|--------|------|
-| id | Long | 21380 | 主键 |
-| orderNo | String | ORDER20230101001 | 订单号 |
-| subject | String | 购买商品A | 标题 |
-| transactionType | Integer | 1 | 订单交易类型 |
-| currency | String | TWD | 币别 |
-| totalAmount | BigDecimal | 100.00 | 订单总金额 |
-| receiptAmount | BigDecimal | 100.00 | 实收金额 |
-| tradeStatus | String | WAIT_BUYER_PAY | 交易状态：WAIT_BUYER_PAY（待支付）、TRADE_SUCCESS（成功）、TRADE_CLOSED（关闭）、TRADE_FINISHED（完结）、TRADE_TIMEOUT（超时） |
-| gmtCreate | LocalDateTime | 2023-01-01T10:00:00 | 交易创建时间 |
-| gmtPayment | LocalDateTime | null | 支付时间 |
-| timeExpire | LocalDateTime | 2023-01-02T10:00:00 | 订单超时时间 |
-| timeoutType | String | null | 超时类型：SYSTEM_CLOSE（系统关闭）、USER_TIMEOUT（用户超时未付） |
-| merchantId | Long | 20116 | 商户id |
-| passbackParams | String | param=value | 公共回传参数 |
-| merchantParams | String | custom=data | 商户传入参数 |
-| createTime | LocalDateTime | 2023-01-01T10:00:00 | 创建时间 |
+| 参数名 | 类型            | 示例值 | 描述                                                                                               |
+|--------|---------------|--------|--------------------------------------------------------------------------------------------------|
+| id | Long          | 21380 | 主键                                                                                               |
+| orderNo | String        | ORDER20230101001 | 订单号                                                                                              |
+| subject | String        | 购买商品A | 标题                                                                                               |
+| transactionType | Integer       | 1 | 订单交易类型                                                                                           |
+| currency | String        | TWD | 币别                                                                                               |
+| totalAmount | BigDecimal    | 100.00 | 订单总金额                                                                                            |
+| receiptAmount | BigDecimal    | 100.00 | 实收金额                                                                                             |
+| tradeStatus | String        | WAIT_BUYER_PAY | 交易状态：WAIT_BUYER_PAY（待支付）、TRADE_SUCCESS（成功）、TRADE_CLOSED（关闭）、TRADE_FINISHED（完结）、TRADE_TIMEOUT（超时） |
+| gmtCreate | Long          | 1775648408222 | 交易创建时间戳                                                                                          |
+| gmtPayment | Long | 1775648408222 | 支付时间戳                                                                                             |
+| timeExpire | Long | 1775648408222 | 订单超时时间戳                                                                                           |
+| timeoutType | String        | null | 超时类型：SYSTEM_CLOSE（系统关闭）、USER_TIMEOUT（用户超时未付）                                                     |
+| merchantId | Long          | 20116 | 商户id                                                                                             |
+| passbackParams | String        | param=value | 公共回传参数                                                                                           |
+| merchantParams | String        | custom=data | 商户传入参数                                                                                           |
+| createTime | Long | 1775648408222 | 创建时间戳                                                                                            |
 
 #### 响应示例
 ```json
@@ -825,14 +825,14 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
     "totalAmount": 100.00,
     "receiptAmount": 100.00,
     "tradeStatus": "WAIT_BUYER_PAY",
-    "gmtCreate": "2023-01-01T10:00:00",
+    "gmtCreate": "1775648497229",
     "gmtPayment": null,
-    "timeExpire": "2023-01-02T10:00:00",
+    "timeExpire": "1775648497229",
     "timeoutType": null,
     "merchantId": 20116,
     "passbackParams": "passbackParams",
     "merchantParams": "merchantParams",
-    "createTime": "2023-01-01T10:00:00"
+    "createTime": "1775648497229"
   }
 }
 ```
@@ -867,14 +867,14 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
     "totalAmount": 100.00,
     "receiptAmount": 100.00,
     "tradeStatus": "TRADE_SUCCESS",
-    "gmtCreate": "2023-01-01T10:00:00",
-    "gmtPayment": "2023-01-01T10:30:00",
-    "timeExpire": "2023-01-02T10:00:00",
+    "gmtCreate": "1775648497229",
+    "gmtPayment": "1775648497229",
+    "timeExpire": "1775648497229",
     "timeoutType": null,
     "merchantId": 20116,
     "passbackParams": "param=value",
     "merchantParams": "custom=data",
-    "createTime": "2023-01-01T10:00:00"
+    "createTime": "1775648497229"
   }
 }
 ```

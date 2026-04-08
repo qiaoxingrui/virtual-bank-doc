@@ -769,8 +769,8 @@ Triggered after an order is cancelled.
 | transactionType | Integer | Yes | 1 | Order Transaction Type (1:Merit Goods, 2:Virtual Currency (Offline), 3:Virtual Currency P2P, 4:Mining Platform B2B Receipt, 5:Game Recharge Charge, 6:Retail Receipt) |
 | currency | String | Yes | TWD | Currency (TWD, USD) |
 | totalAmount | BigDecimal | Yes | 100.00 | Order Total Amount |
-| gmtCreate | LocalDateTime | Yes | 2023-01-01T10:00:00 | Transaction Creation Time |
-| timeExpire | LocalDateTime | Yes | 2023-01-02T10:00:00 | Order Timeout Time |
+| gmtCreate | Long | Yes | 1775648497229 | Transaction Creation Timestamp |
+| timeExpire | Long | Yes | 1775648497229 | Order Timeout Timestamp |
 | passbackParams | String | No | param=value | Public Backward Parameters |
 | merchantParams | String | No | custom=data | Merchant Parameters |
 
@@ -782,8 +782,8 @@ Triggered after an order is cancelled.
   "transactionType": 1,
   "currency": "TWD",
   "totalAmount": 100.00,
-  "gmtCreate": "2023-01-01T10:00:00",
-  "timeExpire": "2023-01-02T10:00:00",
+  "gmtCreate": "1775648497229",
+  "timeExpire": "1775648497229",
   "passbackParams": "param=value",
   "merchantParams": "custom=data"
 }
@@ -801,14 +801,14 @@ Triggered after an order is cancelled.
 | totalAmount | BigDecimal | 100.00 | Order Total Amount |
 | receiptAmount | BigDecimal | 100.00 | Received Amount |
 | tradeStatus | String | WAIT_BUYER_PAY | Transaction Status |
-| gmtCreate | LocalDateTime | 2023-01-01T10:00:00 | Transaction Creation Time |
-| gmtPayment | LocalDateTime | null | Payment Time |
-| timeExpire | LocalDateTime | 2023-01-02T10:00:00 | Order Timeout Time |
+| gmtCreate | Long | 1775648497229 | Transaction Creation Timestamp |
+| gmtPayment | Long | null | Payment Timestamp |
+| timeExpire | Long | 1775648497229 | Order Timeout Timestamp |
 | timeoutType | String | null | Timeout Type: SYSTEM_CLOSE（System Close）、USER_TIMEOUT（User Timeout） |
 | merchantId | Long | 20116 | Merchant ID |
 | passbackParams | String | param=value | Public Backward Parameters |
 | merchantParams | String | custom=data | Merchant Parameters |
-| createTime | LocalDateTime | 2023-01-01T10:00:00 | Creation Time |
+| createTime | Long | 1775648497229 | Creation Timestamp |
 
 #### Response Example
 ```json
@@ -824,14 +824,14 @@ Triggered after an order is cancelled.
     "totalAmount": 100.00,
     "receiptAmount": 100.00,
     "tradeStatus": "WAIT_BUYER_PAY",
-    "gmtCreate": "2023-01-01T10:00:00",
+    "gmtCreate": "1775648497229",
     "gmtPayment": null,
-    "timeExpire": "2023-01-02T10:00:00",
+    "timeExpire": "1775648497229",
     "timeoutType": null,
     "merchantId": 20116,
     "passbackParams": "passbackParams",
     "merchantParams": "merchantParams",
-    "createTime": "2023-01-01T10:00:00"
+    "createTime": "1775648497229"
   }
 }
 ```
@@ -866,14 +866,14 @@ Same as "Create Payment Order" interface response parameters.
     "totalAmount": 100.00,
     "receiptAmount": 100.00,
     "tradeStatus": "TRADE_SUCCESS",
-    "gmtCreate": "2023-01-01T10:00:00",
-    "gmtPayment": "2023-01-01T10:30:00",
-    "timeExpire": "2023-01-02T10:00:00",
+    "gmtCreate": "1775648497229",
+    "gmtPayment": "1775648497229",
+    "timeExpire": "1775648497229",
     "timeoutType": null,
     "merchantId": 20116,
     "passbackParams": "param=value",
     "merchantParams": "custom=data",
-    "createTime": "2023-01-01T10:00:00"
+    "createTime": "1775648497229"
   }
 }
 ```

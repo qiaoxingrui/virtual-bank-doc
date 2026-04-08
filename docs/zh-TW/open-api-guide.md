@@ -769,8 +769,8 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 | transactionType | Integer | 是 | 1 | 訂單交易類型(1:功德款,2:虛擬通貨（線下）,3:虛擬通貨P2P,4:算力平臺 B2B 收款,5:遊戲充值收費,6:零售收款) |
 | currency | String | 是 | TWD | 幣別(TWD, USD) |
 | totalAmount | BigDecimal | 是 | 100.00 | 訂單總金額 |
-| gmtCreate | LocalDateTime | 是 | 2023-01-01T10:00:00 | 交易創建時間 |
-| timeExpire | LocalDateTime | 是 | 2023-01-02T10:00:00 | 訂單超時時間 |
+| gmtCreate | Long | 是 | 1775648497229 | 交易創建時間戳 |
+| timeExpire | Long | 是 | 1775648497229 | 訂單超時時間戳 |
 | passbackParams | String | 否 | param=value | 公共回傳參數 |
 | merchantParams | String | 否 | custom=data | 商戶傳入參數 |
 
@@ -782,8 +782,8 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
   "transactionType": 1,
   "currency": "TWD",
   "totalAmount": 100.00,
-  "gmtCreate": "2023-01-01T10:00:00",
-  "timeExpire": "2023-01-02T10:00:00",
+  "gmtCreate": "1775648497229",
+  "timeExpire": "1775648497229",
   "passbackParams": "param=value",
   "merchantParams": "custom=data"
 }
@@ -801,13 +801,13 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 | totalAmount | BigDecimal | 100.00 | 訂單總金額 |
 | receiptAmount | BigDecimal | 100.00 | 實收金額 |
 | tradeStatus | String | WAIT_BUYER_PAY | 交易狀態：WAIT_BUYER_PAY（待支付）、TRADE_SUCCESS（成功）、TRADE_CLOSED（關閉）、TRADE_FINISHED（完結）、TRADE_TIMEOUT（超時） |
-| gmtCreate | LocalDateTime | 2023-01-01T10:00:00 | 交易創建時間 |
-| gmtPayment | LocalDateTime | null | 支付時間 |
-| timeExpire | LocalDateTime | 2023-01-02T10:00:00 | 訂單超時時間 |
+| gmtCreate | Long | 1775648497229 | 交易創建時間戳 |
+| gmtPayment | Long | null | 支付時間戳 |
+| timeExpire | Long | 1775648497229 | 訂單超時時間戳 |
 | timeoutType | String | null | 超時類型：SYSTEM_CLOSE（系統關閉）、USER_TIMEOUT（用戶超時未付） |
 | passbackParams | String | param=value | 公共回傳參數 |
 | merchantParams | String | custom=data | 商戶傳入參數 |
-| createTime | LocalDateTime | 2023-01-01T10:00:00 | 創建時間 |
+| createTime | Long | 1775648497229 | 創建時間戳 |
 
 #### 響應示例
 ```json
@@ -823,13 +823,13 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
     "totalAmount": 100.00,
     "receiptAmount": 100.00,
     "tradeStatus": "WAIT_BUYER_PAY",
-    "gmtCreate": "2023-01-01T10:00:00",
+    "gmtCreate": "1775648497229",
     "gmtPayment": null,
-    "timeExpire": "2023-01-02T10:00:00",
+    "timeExpire": "1775648497229",
     "timeoutType": null,
     "passbackParams": "passbackParams",
     "merchantParams": "merchantParams",
-    "createTime": "2023-01-01T10:00:00"
+    "createTime": "1775648497229"
   }
 }
 ```
@@ -864,13 +864,13 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
     "totalAmount": 100.00,
     "receiptAmount": 100.00,
     "tradeStatus": "TRADE_SUCCESS",
-    "gmtCreate": "2023-01-01T10:00:00",
-    "gmtPayment": "2023-01-01T10:30:00",
-    "timeExpire": "2023-01-02T10:00:00",
+    "gmtCreate": "1775648497229",
+    "gmtPayment": "1775648497229",
+    "timeExpire": "1775648497229",
     "timeoutType": null,
     "passbackParams": "param=value",
     "merchantParams": "custom=data",
-    "createTime": "2023-01-01T10:00:00"
+    "createTime": "1775648497229"
   }
 }
 ```
