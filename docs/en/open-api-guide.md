@@ -809,6 +809,7 @@ Triggered after an order is cancelled.
 | passbackParams | String | param=value | Public Backward Parameters |
 | merchantParams | String | custom=data | Merchant Parameters |
 | createTime | Long | 1775648497229 | Creation Timestamp |
+| virtualAccount | String | 123456789 | virtual account |
 
 #### Response Example
 ```json
@@ -831,7 +832,8 @@ Triggered after an order is cancelled.
     "merchantId": 20116,
     "passbackParams": "passbackParams",
     "merchantParams": "merchantParams",
-    "createTime": "1775648497229"
+    "createTime": "1775648497229",
+    "virtualAccount": "123456789"
   }
 }
 ```
@@ -873,7 +875,8 @@ Same as "Create Payment Order" interface response parameters.
     "merchantId": 20116,
     "passbackParams": "param=value",
     "merchantParams": "custom=data",
-    "createTime": "1775648497229"
+    "createTime": "1775648497229",
+    "virtualAccount": "123456789"
   }
 }
 ```

@@ -810,6 +810,7 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
 | passbackParams | String        | param=value | 公共回传参数                                                                                           |
 | merchantParams | String        | custom=data | 商户传入参数                                                                                           |
 | createTime | Long | 1775648408222 | 创建时间戳                                                                                            |
+| virtualAccount | String | 123456789 | 虛擬賬號                                                                                            |
 
 #### 响应示例
 ```json
@@ -832,7 +833,8 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
     "merchantId": 20116,
     "passbackParams": "passbackParams",
     "merchantParams": "merchantParams",
-    "createTime": "1775648497229"
+    "createTime": "1775648497229",
+    "virtualAccount": "123456789"
   }
 }
 ```
@@ -874,7 +876,8 @@ function verifyWebhook(string $webhookKey, string $signatureHeader, string $body
     "merchantId": 20116,
     "passbackParams": "param=value",
     "merchantParams": "custom=data",
-    "createTime": "1775648497229"
+    "createTime": "1775648497229",
+    "virtualAccount": "123456789"
   }
 }
 ```
